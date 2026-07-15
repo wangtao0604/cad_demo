@@ -1,17 +1,18 @@
 <script setup>
 /**
- * 项目看板 · 列表视图 / 地图视图 切换
+ * 项目看板 · 项目负责人使用驾驶舱 / 列表，其他角色使用列表 / 地图
  * 只显示当前用户参与的项目（按角色过滤）
  */
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Grid, MapLocation, SwitchButton, Aim, Document, TrendCharts } from '@element-plus/icons-vue'
+import { Search, DataBoard, Grid, MapLocation, SwitchButton, Aim, Document, TrendCharts } from '@element-plus/icons-vue'
 import { useAppStore } from '../store/useAppStore'
 import { personas, flowStages, categories, projects as allProjects } from '../data/mockData'
+import LeaderDashboard from '../components/LeaderDashboard.vue'
 
 const { state, user, myProjects, openProject, logout } = useAppStore()
 
-const viewMode = ref('list') // list | map
+const viewMode = ref('list') // dashboard | list | map
 const catFilter = ref('全部')
 const stageFilter = ref('全部')
 const search = ref('')
@@ -104,14 +105,20 @@ const onLogout = () => {
       </div>
       <div class="dt-right">
         <el-radio-group v-model="viewMode" size="default">
+          <el-radio-button v-if="user.id === 'leader'" value="dashboard"><el-icon><DataBoard /></el-icon>&nbsp;驾驶舱</el-radio-button>
           <el-radio-button value="list"><el-icon><Grid /></el-icon>&nbsp;列表</el-radio-button>
-          <el-radio-button value="map"><el-icon><MapLocation /></el-icon>&nbsp;地图</el-radio-button>
+          <el-radio-button v-if="user.id !== 'leader'" value="map"><el-icon><MapLocation /></el-icon>&nbsp;地图</el-radio-button>
         </el-radio-group>
       </div>
     </div>
 
+    <!-- 项目级全局驾驶舱（进入具体项目之前） -->
+    <div v-if="viewMode === 'dashboard'" class="dash-cockpit">
+      <LeaderDashboard :projects="filtered" :user="user" @open-project="openProject" />
+    </div>
+
     <!-- 列表视图 -->
-    <div v-if="viewMode === 'list'" class="dash-list">
+    <div v-else-if="viewMode === 'list'" class="dash-list">
       <div v-for="p in filtered" :key="p.id" class="proj-card" @click="onOpen(p)">
         <div class="pc-top">
           <div class="pc-tags">
@@ -141,20 +148,17 @@ const onLogout = () => {
       <div v-if="filtered.length === 0" class="empty-state">暂无参与的项目</div>
     </div>
 
-    <!-- 地图视图 -->
+    <!-- 地图视图：项目负责人已有全局分布态势，仅其他角色保留 -->
     <div v-else class="dash-map">
       <div class="map-canvas">
         <svg viewBox="0 0 600 400" class="map-svg">
-          <!-- 底图网格 -->
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
             </pattern>
           </defs>
           <rect width="600" height="400" fill="url(#grid)" />
-          <!-- 模拟区域轮廓 -->
           <path d="M80,120 Q200,80 320,110 T540,160 Q560,260 460,310 T200,330 Q100,300 80,200 Z" fill="rgba(74,158,255,0.04)" stroke="rgba(74,158,255,0.18)" stroke-width="1.5" />
-          <!-- 项目点位：外环=阶段色 / 内圈=类别色 -->
           <g v-for="p in filtered" :key="p.id" class="map-pt" @click="onOpen(p)">
             <circle :cx="p.coords.x" :cy="p.coords.y" :r="22" fill="none" :stroke="stageColor(p.stageId)" stroke-width="2" opacity="0.75" />
             <circle :cx="p.coords.x" :cy="p.coords.y" :r="18" :fill="catColor(p.category) + '22'" :stroke="catColor(p.category)" stroke-width="1.5" />
@@ -163,7 +167,6 @@ const onLogout = () => {
             <text :x="p.coords.x" :y="p.coords.y + 32" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">{{ stageName(p.stageId) }} · {{ p.progress }}%</text>
           </g>
         </svg>
-        <!-- 图例 -->
         <div class="map-legend">
           <div class="ml-title">工程类别</div>
           <div v-for="c in categories.slice(1)" :key="c" class="ml-item">
@@ -172,6 +175,7 @@ const onLogout = () => {
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -203,6 +207,7 @@ const onLogout = () => {
 }
 .dt-left { display: flex; align-items: center; gap: 12px; }
 .dt-label { color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 600; }
+.dash-cockpit { flex: 1; min-height: 0; overflow: hidden; }
 
 .dash-list {
   flex: 1; overflow: auto; padding: 20px 24px;

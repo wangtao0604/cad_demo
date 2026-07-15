@@ -22,12 +22,11 @@ import { boreholeTable } from '../data/treeData'
 import FlowNav from '../components/FlowNav.vue'
 import TodoPanel from '../components/TodoPanel.vue'
 import ResultPanel from '../components/ResultPanel.vue'
-import LeaderDashboard from '../components/LeaderDashboard.vue'
 import IbgiPane from './IbgiPane.vue'
 
 const {
   state, user, currentProject, currentStage, currentProjectStageStatus,
-  setStage, setCockpitTab, setStageFunc, enterWorkspace, logout, openProject, myProjects,
+  setStage, setCockpitTab, setStageFunc, enterWorkspace, logout,
 } = useAppStore()
 
 const isLeader = computed(() => user.value.id === 'leader')
@@ -224,6 +223,7 @@ const todoItems = computed(() => {
   const all = todos[user.value.id] || []
   return isOverview.value ? all : all.filter((t) => t.stageId === state.currentStageId)
 })
+const stageTodoItems = computed(() => todoItems.value.filter((t) => t.stageId === state.currentStageId))
 const resultItems = computed(() => {
   if (!canAccessStage(state.currentStageId)) return []
   const vis = (r) => !r.roles || r.roles.includes(user.value.id)
@@ -297,10 +297,15 @@ const canAccessStage = (stageId) => {
 }
 
 const onBack = () => { state.view = 'dashboard' }
-const onOpenProject = (id) => openProject(id)
 const onLogout = () => logout()
 
 // 阶段工作台指标
+const projectMetrics = computed(() => [
+  { label:'项目总体进度', value:`${currentProject.value.progress}%`, icon:TrendCharts, color:'#4a9eff' },
+  { label:'当前所在阶段', value:stageName(currentProject.value.stageId), icon:Flag, color:'#10b981' },
+  { label:'项目成员', value:`${currentProject.value.members} 人`, icon:User, color:'#a855f7' },
+  { label:'计划截止', value:currentProject.value.deadline, icon:Timer, color:'#f59e0b' },
+])
 const stageMetrics = computed(() => [
   { label:'阶段状态', value: ({done:'已完成',doing:'进行中',todo:'未开始'})[currentProjectStageStatus.value[currentStage.value.id]] || '-', icon: Promotion, color:'#10b981' },
   { label:'本阶段待办', value: todoItems.value.length + ' 项', icon: List, color:'#a855f7' },
@@ -358,29 +363,50 @@ const stageMetrics = computed(() => [
       />
 
       <main class="cp-main">
-        <!-- 项目驾驶舱：项目负责人大屏看板 -->
-        <div v-if="isOverview && funcPanel === 'dashboard'" class="leader-view">
-          <LeaderDashboard
-            v-if="isLeader"
-            :projects="myProjects"
-            :user="user"
-            @open-project="onOpenProject"
-          />
-          <!-- 非负责人「项目管控」轻量页 -->
-          <div v-else class="view-scroll">
-            <div class="block-card">
-              <div class="bc-head"><span class="bc-title">项目管控</span><span class="bc-sub">{{ user.title }} · {{ currentProject.name }}</span></div>
-              <div class="proj-tip">
-                <el-icon><DataBoard /></el-icon>
-                <span>您当前以「{{ user.title }}」身份进入，默认聚焦「{{ stageName(user.focusStage) }}」阶段。可在上方流程条或 Ribbon 切换阶段，或查看下方流程待办与成果。</span>
+        <!-- 项目驾驶舱：仅展示当前项目信息 -->
+        <div v-if="isOverview && funcPanel === 'dashboard'" class="view-scroll">
+          <div class="stage-current">
+            <div class="sc-left">
+              <div class="sc-stage">{{ currentProject.name }}</div>
+              <div class="sc-desc">{{ currentProject.desc }}</div>
+            </div>
+            <div class="sc-right">
+              <div class="sc-access">
+                <span class="sc-label">当前查看：</span>
+                <span class="sc-role-tag">{{ currentStage.name }}</span>
+                <span class="sc-role-tag">{{ currentProject.category }}</span>
+                <span class="sc-role-tag">{{ currentProject.city }}</span>
               </div>
             </div>
+          </div>
+
+          <div class="metric-grid">
+            <div v-for="m in projectMetrics" :key="m.label" class="metric-card">
+              <div class="mc-icon" :style="{ background: m.color + '1a', color: m.color }">
+                <el-icon><component :is="m.icon" /></el-icon>
+              </div>
+              <div class="mc-body">
+                <div class="mc-value">{{ m.value }}</div>
+                <div class="mc-label">{{ m.label }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col">
             <div class="block-card">
-              <div class="bc-head"><span class="bc-title">流程待办</span><span class="bc-sub">{{ todoItems.length }} 项</span></div>
-              <TodoPanel :items="todoItems" @handle="onTodoHandle" />
+              <div class="bc-head">
+                <span class="bc-title">{{ currentStage.name }} · 阶段待办</span>
+                <span class="bc-sub">{{ stageTodoItems.length }} 项</span>
+                <el-button v-if="stageTodoItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('todo')">全部</el-button>
+              </div>
+              <TodoPanel :items="stageTodoItems.slice(0,4)" empty-text="本阶段暂无待办" @handle="onTodoHandle" />
             </div>
             <div class="block-card">
-              <div class="bc-head"><span class="bc-title">项目成果</span><span class="bc-sub">模型 / 文档 / 报告 / 图件</span></div>
+              <div class="bc-head">
+                <span class="bc-title">{{ currentStage.name }} · 阶段成果</span>
+                <span class="bc-sub">{{ resultItems.length }} 项</span>
+                <el-button v-if="resultItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('result')">全部</el-button>
+              </div>
               <ResultPanel :results="resultItems" :role="user.id" @view="onResultView" />
             </div>
           </div>
@@ -725,8 +751,6 @@ const stageMetrics = computed(() => [
 
 .cp-main { flex: 1; overflow: hidden; }
 .view-scroll { height: 100%; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-.leader-view { height: 100%; overflow: hidden; background: #0b0d12; }
-
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .metric-card { display: flex; align-items: center; gap: 14px; padding: 18px; background: #1a1d26; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
 .mc-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
