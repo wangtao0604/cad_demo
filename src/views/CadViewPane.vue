@@ -17,11 +17,19 @@ import {
   startBoreholePlacement,
   BOREHOLE_COMMAND_NAME,
 } from '../composables/useBoreholeCommand'
+import {
+  addSectionTestHoles,
+  configureSectionViewer,
+  generateCadSection,
+  startSectionLine,
+} from '../composables/useSectionCommand'
 
 const props = defineProps({
   options: { type: Object, required: true }, // { prefix, startNo, depth }
   trigger: { type: Number, default: 0 },
   localFile: { type: File, default: undefined },
+  toolMode: { type: String, default: 'borehole' },
+  generateTrigger: { type: Number, default: 0 },
 })
 
 // 关闭 CAD Viewer 自带的顶部工具栏/主菜单/命令行，只保留画布，
@@ -59,7 +67,7 @@ if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
   AcApDocManager.prototype.__cadDemoWorkerPatched = true
 }
 
-const emit = defineEmits(['borehole-finish', 'status', 'created', 'file-loaded'])
+const emit = defineEmits(['borehole-finish', 'section-finish', 'status', 'created', 'file-loaded'])
 
 const locale = ref('zh')
 const cadBaseUrl = absUrl('cad-data/')
@@ -74,38 +82,59 @@ watch(
   () => props.localFile,
   (file) => {
     if (!file) return
+    if (props.toolMode === 'section' && AcApDocManager.instance.curDocument) {
+      AcApDocManager.instance.curDocument.__sectionTestHolesAdded = false
+    }
     openingFileName.value = file.name
     errorMsg.value = ''
     emit('status', `正在打开 ${file.name}…`)
   },
 )
 
-const runBorehole = () => {
+watch(
+  () => props.generateTrigger,
+  (value) => {
+    if (!value || props.toolMode !== 'section') return
+    const result = generateCadSection()
+    emit('status', result.ok ? `CAD 剖面已生成 · ${result.holeCount} 个测试孔` : result.message)
+    emit('section-finish', { generated: result.ok, message: result.message })
+  },
+)
+
+const runInteractiveCommand = () => {
   placing.value = true
-  emit('status', `补孔中 · ${props.options.prefix}${props.options.startNo} 起 / 深度 ${props.options.depth}m`)
-  startBoreholePlacement()
+  if (props.toolMode === 'section') {
+    emit('status', '交互生成剖线 · 指定起点')
+    startSectionLine()
+  } else {
+    emit('status', `补孔中 · ${props.options.prefix}${props.options.startNo} 起 / 深度 ${props.options.depth}m`)
+    startBoreholePlacement()
+  }
 }
 
 const onViewerCreate = () => {
-  configureBoreholeViewer(
-    () => ({
-      prefix: props.options.prefix,
-      startNo: props.options.startNo,
-      depth: props.options.depth,
-    }),
-    (nextNo) => {
-      // 命令 finally 回调：复位状态 + 通知父更新起始编号
+  if (props.toolMode === 'section') {
+    configureSectionViewer((result) => {
       placing.value = false
       emit('status', '就绪')
-      emit('borehole-finish', nextNo)
-    },
-  )
+      emit('section-finish', result)
+    })
+  } else {
+    configureBoreholeViewer(
+      () => ({ prefix: props.options.prefix, startNo: props.options.startNo, depth: props.options.depth }),
+      (nextNo) => {
+        placing.value = false
+        emit('status', '就绪')
+        emit('borehole-finish', nextNo)
+      },
+    )
+  }
   viewerReady.value = true
   emit('created')
   // viewer 就绪后补发缓存的触发
   if (pendingTrigger.value > 0) {
     pendingTrigger.value = 0
-    runBorehole()
+    runInteractiveCommand()
   }
 }
 
@@ -119,7 +148,7 @@ watch(
       emit('status', 'CAD 视口加载中…')
       return
     }
-    runBorehole()
+    runInteractiveCommand()
   },
 )
 
@@ -134,6 +163,7 @@ const onOpenFileProgress = (progress) => {
     openingFileName.value = ''
     emit('status', `已打开 · ${fileName}`)
     emit('file-loaded', fileName)
+    if (props.toolMode === 'section') window.setTimeout(addSectionTestHoles, 100)
     return
   }
   const percentage = Math.round(Number(progress?.percentage) || 0)
@@ -168,7 +198,7 @@ onErrorCaptured((err) => {
 <template>
   <div class="cad-pane">
     <div v-if="placing" class="cad-overlay-tip">
-      补孔模式：在视口中点击放置钻孔，空回车或 Esc 结束
+      {{ toolMode === 'section' ? '剖线模式：依次拾取剖线节点，空回车或 Esc 结束' : '补孔模式：在视口中点击放置钻孔，空回车或 Esc 结束' }}
     </div>
     <MlCadViewer
       :locale="locale"

@@ -50,6 +50,7 @@ const placementTabs = [{
   }],
 }]
 const cagMode = ref(state.workspaceTarget === 'cag')
+const sectionEditMode = ref(false)
 const cagCommandLabels = {
   'cag-soil-test':'水土试验', 'cag-auto-layer':'自动分层', 'cag-manual-layer':'手动分层', 'cag-section-settings':'剖面设置',
   'cag-view-layer':'综合分层', 'cag-view-borehole':'钻孔信息', 'cag-view-geology':'地质描述', 'cag-view-water':'水位信息',
@@ -73,7 +74,7 @@ const cagTabs = [{
         { id:'cag-soil-test', type:'button', label:'水土试验', size:'large', icon:Coffee },
         { id:'cag-auto-layer', type:'button', label:'自动分层', size:'large', icon:Connection },
         { id:'cag-manual-layer', type:'button', label:'手动分层', size:'large', icon:EditPen },
-        { id:'cag-section-settings', type:'button', label:'剖面设置', size:'large', icon:Share },
+        { id:'cag-section-settings', type:'button', label:'剖面编辑', size:'large', icon:Share },
         { id:'cag-view', type:'button', label:'编辑数据', size:'large', icon:Edit },
         { id:'cag-stat', type:'button', label:'统计', size:'large', icon:DataAnalysis },
         { id:'cag-calc', type:'button', label:'计算', size:'large', icon:Operation },
@@ -81,8 +82,21 @@ const cagTabs = [{
     }],
   }],
 }]
-const specializedMode = computed(() => placementMode.value || cagMode.value)
-const ribbonTabs = computed(() => placementMode.value ? placementTabs : cagMode.value ? cagTabs : ribbon.value.tabs)
+const sectionActionGroup = {
+  id: 'g-section-actions', title: '剖面编辑', orientation: 'row', collections: [{
+    id: 'c-section-actions', items: [
+      { id:'open-plan', type:'button', label:'打开平面图', size:'large', icon:FolderOpened },
+      { id:'section-line', type:'button', label:'交互生成剖线', size:'large', icon:Connection },
+      { id:'section-result', type:'button', label:'生成剖面', size:'large', icon:Share },
+    ],
+  }],
+}
+const cagRibbonTabs = computed(() => [{
+  ...cagTabs[0],
+  groups: sectionEditMode.value ? [...cagTabs[0].groups, sectionActionGroup] : cagTabs[0].groups,
+}])
+const specializedMode = computed(() => placementMode.value || cagMode.value || sectionEditMode.value)
+const ribbonTabs = computed(() => placementMode.value ? placementTabs : cagMode.value ? cagRibbonTabs.value : ribbon.value.tabs)
 const readOnly = computed(() => ribbon.value.readOnly)
 const treeData = computed(() => buildTreeForRole(currentProjectRoleId.value))
 
@@ -133,6 +147,8 @@ const onTabRemove = (name) => {
 const boreholeDialogVisible = ref(false)
 const boreholeOptions = ref({ prefix: 'ZK', startNo: 1, depth: 20 })
 const boreholeTrigger = ref(0)
+const sectionLineTrigger = ref(0)
+const sectionGenerateTrigger = ref(0)
 const planFileInput = ref(null)
 const planFile = ref()
 const onBoreholeFinish = (nextNo) => { if (Number.isFinite(nextNo) && nextNo > 0) boreholeOptions.value.startNo = nextNo }
@@ -174,6 +190,9 @@ const onRibbonClick = ({ itemId }) => {
     ElMessage.warning('只读模式，该操作不可用')
     return
   }
+  if (itemId.startsWith('cag-') && itemId !== 'cag-section-settings') {
+    sectionEditMode.value = false
+  }
   switch (itemId) {
     case 'open-plan': selectPlanFile(); break
     case 'borehole-place': ensureCadTab(); boreholeDialogVisible.value = true; break
@@ -192,6 +211,18 @@ const onRibbonClick = ({ itemId }) => {
     case 'cag-auto-layer':
       cagActiveCommand.value = 'cag-auto-layer'
       cagActiveView.value = '自动分层'
+      break
+    case 'cag-section-settings':
+      cagActiveCommand.value = 'cag-section-editor'
+      cagActiveView.value = '剖面编辑'
+      sectionEditMode.value = true
+      activeTab.value = 'cag'
+      break
+    case 'section-line':
+      sectionLineTrigger.value += 1
+      break
+    case 'section-result':
+      sectionGenerateTrigger.value += 1
       break
     case 'cag-stat':
       cagActiveCommand.value = 'cag-stat-panel'
@@ -236,6 +267,7 @@ watch(() => state.workspaceTarget, (t) => {
   else if (t === 'cag') {
     placementMode.value = false
     cagMode.value = true
+    sectionEditMode.value = false
     activeTab.value = 'cag'
     cagActiveCommand.value = ''
     cagActiveView.value = '专业系统'
@@ -296,6 +328,17 @@ const onBack = () => backToCockpit()
         @select="(label) => (cagActiveView = label)"
       />
       <CagAutoLayerPane v-else-if="cagActiveCommand === 'cag-auto-layer'" />
+      <div v-else-if="cagActiveCommand === 'cag-section-editor'" class="section-cad-workspace">
+        <CadViewPane
+          :options="boreholeOptions"
+          :trigger="sectionLineTrigger"
+          :generate-trigger="sectionGenerateTrigger"
+          :local-file="planFile"
+          tool-mode="section"
+          @section-finish="({ generated, message }) => generated ? ElMessage.success('CAD 剖面已生成') : message && ElMessage.warning(message)"
+          @status="onCadStatus"
+        />
+      </div>
       <CagCommandPanel
         v-else-if="cagActiveCommand === 'cag-stat-panel' || cagActiveCommand === 'cag-calc-panel'"
         :mode="cagActiveCommand === 'cag-stat-panel' ? 'statistics' : 'calculations'"
@@ -412,6 +455,7 @@ const onBack = () => backToCockpit()
 .cag-view-head { height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 600; }
 .cag-view-head .el-icon { color: var(--accent); font-size: 17px; }
 .cag-view-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--app-bg-2); }
+.section-cad-workspace { position: relative; flex: 1; min-height: 0; }
 .cag-view-name { color: var(--text-mute); font-size: 18px; }
 :deep(.el-tabs__content) { flex: 1; min-height: 0; overflow: hidden; }
 :deep(.el-tab-pane) { height: 100%; }
