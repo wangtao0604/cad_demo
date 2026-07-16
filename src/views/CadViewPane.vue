@@ -33,8 +33,8 @@ AcApSettingManager.instance.isShowStats = false
 const emit = defineEmits(['borehole-finish', 'status', 'created'])
 
 const locale = ref('zh')
-const cadBaseUrl = new URL('/cad-data/', window.location.origin).href
-const drawingUrl = new URL('/cad-data/templates/acadiso.dxf', window.location.origin).href
+const cadBaseUrl = import.meta.env.BASE_URL + 'cad-data/'
+const drawingUrl = import.meta.env.BASE_URL + 'cad-data/templates/acadiso.dxf'
 const placing = ref(false)
 const viewerReady = ref(false)
 const errorMsg = ref('')
