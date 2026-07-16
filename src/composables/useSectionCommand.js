@@ -7,6 +7,8 @@ import {
 } from '@mlightcad/cad-simple-viewer'
 import {
   AcCmColor,
+  AcDbBlockReference,
+  AcDbBlockTableRecord,
   AcDbCircle,
   AcDbLayerTableRecord,
   AcDbLine,
@@ -61,12 +63,11 @@ const makeText = (text, point, height) => {
 }
 
 export const SECTION_TEST_HOLES = [
-  { code: 'ZK-01', x: 120, y: 120, elevation: 42.6, depth: 28 },
-  { code: 'ZK-02', x: 330, y: 170, elevation: 44.1, depth: 32 },
-  { code: 'ZK-03', x: 560, y: 125, elevation: 41.8, depth: 26 },
-  { code: 'ZK-04', x: 220, y: 355, elevation: 39.7, depth: 30 },
-  { code: 'ZK-05', x: 470, y: 330, elevation: 40.5, depth: 35 },
-  { code: 'ZK-06', x: 700, y: 285, elevation: 38.9, depth: 29 },
+  { code: 'ZK1', x: 330, y: 190, elevation: 42.6, depth: 20 },
+  { code: 'ZK2', x: 365, y: 80, elevation: 41.2, depth: 20 },
+  { code: 'ZK3', x: 610, y: 175, elevation: 40.1, depth: 20 },
+  { code: 'ZK4', x: 430, y: 405, elevation: 43.8, depth: 20 },
+  { code: 'ZK5', x: 120, y: 365, elevation: 39.7, depth: 20 },
 ]
 
 const distanceToSegment = (point, start, end) => {
@@ -111,15 +112,24 @@ export const addSectionTestHoles = () => {
   const context = manager.context
   if (!context?.doc?.database || context.doc.__sectionTestHolesAdded) return
   ensureLayer(context, TEST_HOLE_LAYER, 0x66d9ef)
-  const radius = 10
+  const radius = 13
   SECTION_TEST_HOLES.forEach((hole) => {
-    const center = new AcGePoint3d(hole.x, hole.y, 0)
-    appendAndDisplay(context, [
-      style(new AcDbCircle(center, radius), TEST_HOLE_LAYER, 0x66d9ef),
-      style(new AcDbLine(new AcGePoint3d(hole.x - radius, hole.y, 0), new AcGePoint3d(hole.x + radius, hole.y, 0)), TEST_HOLE_LAYER, 0x66d9ef),
-      style(new AcDbLine(new AcGePoint3d(hole.x, hole.y - radius, 0), new AcGePoint3d(hole.x, hole.y + radius, 0)), TEST_HOLE_LAYER, 0x66d9ef),
-      makeText(`${hole.code}  H=${hole.elevation}m  D=${hole.depth}m`, new AcGePoint3d(hole.x + 16, hole.y + 8, 0), 9),
-    ])
+    const blockName = `GEO_SECTION_${hole.code}`
+    let blockRecord = context.doc.database.tables.blockTable.getAt(blockName)
+    if (!blockRecord) {
+      blockRecord = new AcDbBlockTableRecord({ name: blockName, origin: new AcGePoint3d(0, 0, 0) })
+      context.doc.database.tables.blockTable.add(blockRecord)
+      blockRecord.appendEntity([
+        style(new AcDbCircle(new AcGePoint3d(0, 0, 0), radius), TEST_HOLE_LAYER, 0xf7d154),
+        style(new AcDbLine(new AcGePoint3d(-radius, 0, 0), new AcGePoint3d(radius, 0, 0)), TEST_HOLE_LAYER, 0xf7d154),
+        style(new AcDbLine(new AcGePoint3d(0, -radius, 0), new AcGePoint3d(0, radius, 0)), TEST_HOLE_LAYER, 0xf7d154),
+        makeText(hole.code, new AcGePoint3d(radius + 10, 7, 0), 11),
+        makeText(`${hole.depth}m`, new AcGePoint3d(radius + 10, -8, 0), 9),
+      ])
+    }
+    const blockReference = style(new AcDbBlockReference(blockName), TEST_HOLE_LAYER, 0xf7d154)
+    blockReference.position = new AcGePoint3d(hole.x, hole.y, 0)
+    appendAndDisplay(context, [blockReference])
   })
   context.doc.__sectionTestHolesAdded = true
   window.setTimeout(() => context.view.zoomToFitDrawing(), 120)

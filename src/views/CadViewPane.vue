@@ -36,7 +36,7 @@ const props = defineProps({
 // 由外层 WorkspaceShell 的 @mlightcad/ribbon 提供统一 Ribbon。
 AcApSettingManager.instance.isShowToolbar = false
 AcApSettingManager.instance.isShowMainMenu = false
-AcApSettingManager.instance.isShowCommandLine = false
+AcApSettingManager.instance.isShowCommandLine = props.toolMode === 'section'
 AcApSettingManager.instance.isShowCoordinate = false
 AcApSettingManager.instance.isShowLanguageSelector = false
 AcApSettingManager.instance.isShowEntityInfo = false
@@ -72,11 +72,27 @@ const emit = defineEmits(['borehole-finish', 'section-finish', 'status', 'create
 const locale = ref('zh')
 const cadBaseUrl = absUrl('cad-data/')
 const drawingUrl = absUrl('cad-data/templates/acadiso.dxf')
+const cadResourcesReady = ref(false)
 const placing = ref(false)
 const viewerReady = ref(false)
 const errorMsg = ref('')
 const pendingTrigger = ref(0)
 const openingFileName = ref('')
+
+const prepareCadFonts = async () => {
+  const fontMapping = { ...(AcApSettingManager.instance.fontMapping || {}) }
+  try {
+    const response = await fetch(absUrl('cad-data/fonts/simkai.woff'), { method: 'HEAD', cache: 'no-cache' })
+    const contentType = response.headers.get('content-type') || ''
+    if (!response.ok || contentType.includes('text/html')) throw new Error(`HTTP ${response.status}`)
+    delete fontMapping.simkai
+  } catch (error) {
+    fontMapping.simkai = 'hztxt'
+    console.warn('[CAD] simkai 字体不可用，已映射为 hztxt:', error)
+  }
+  AcApSettingManager.instance.fontMapping = fontMapping
+  cadResourcesReady.value = true
+}
 
 watch(
   () => props.localFile,
@@ -181,6 +197,7 @@ onMounted(() => {
   eventBus.on('message', onViewerMessage)
   eventBus.on('open-file-progress', onOpenFileProgress)
   eventBus.on('failed-to-open-file', onOpenFileFailed)
+  prepareCadFonts()
 })
 onUnmounted(() => {
   eventBus.off('message', onViewerMessage)
@@ -201,6 +218,7 @@ onErrorCaptured((err) => {
       {{ toolMode === 'section' ? '剖线模式：依次拾取剖线节点，空回车或 Esc 结束' : '补孔模式：在视口中点击放置钻孔，空回车或 Esc 结束' }}
     </div>
     <MlCadViewer
+      v-if="cadResourcesReady"
       :locale="locale"
       :background="0x1a1a2e"
       :mode="AcEdOpenMode.Write"
@@ -210,6 +228,7 @@ onErrorCaptured((err) => {
       :local-file="localFile"
       @create="onViewerCreate"
     />
+    <div v-else class="cad-resource-loading">正在检查 CAD 字体资源…</div>
     <div
       v-if="errorMsg"
       style="position:absolute;bottom:10px;left:10px;z-index:30;max-width:60%;
@@ -223,6 +242,7 @@ onErrorCaptured((err) => {
 
 <style scoped>
 .cad-pane { position: absolute; inset: 0; overflow: hidden; }
+.cad-resource-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #8fa3b8; background: #1a1a2e; font-size: 12px; }
 :deep(.ml-cad-viewer-container) {
   position: absolute !important;
   inset: 0 !important;
