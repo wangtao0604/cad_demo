@@ -19,6 +19,7 @@ import CadViewPane from './CadViewPane.vue'
 import IbgiPane from './IbgiPane.vue'
 import CagDataView from './CagDataView.vue'
 import CagCommandPanel from './CagCommandPanel.vue'
+import CagAutoLayerPane from './CagAutoLayerPane.vue'
 import { buildRibbonForRole, fileMenuItems } from '../data/ribbonConfig'
 import { buildTreeForRole } from '../data/treeData'
 import { useAppStore } from '../store/useAppStore'
@@ -188,6 +189,10 @@ const onRibbonClick = ({ itemId }) => {
       cagActiveView.value = '编辑数据'
       ElMessage.success('已打开：编辑数据')
       break
+    case 'cag-auto-layer':
+      cagActiveCommand.value = 'cag-auto-layer'
+      cagActiveView.value = '自动分层'
+      break
     case 'cag-stat':
       cagActiveCommand.value = 'cag-stat-panel'
       cagActiveView.value = '统计'
@@ -290,6 +295,7 @@ const onBack = () => backToCockpit()
         :command="cagActiveCommand"
         @select="(label) => (cagActiveView = label)"
       />
+      <CagAutoLayerPane v-else-if="cagActiveCommand === 'cag-auto-layer'" />
       <CagCommandPanel
         v-else-if="cagActiveCommand === 'cag-stat-panel' || cagActiveCommand === 'cag-calc-panel'"
         :mode="cagActiveCommand === 'cag-stat-panel' ? 'statistics' : 'calculations'"

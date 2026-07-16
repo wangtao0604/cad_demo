@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { List } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Edit, List, Plus } from '@element-plus/icons-vue'
 
 const props = defineProps({ command: { type: String, default: 'cag-view-borehole' } })
 const emit = defineEmits(['select'])
@@ -21,7 +22,7 @@ const tabs = [
 const boreholeCodes = ['ZK-01','ZK-02','ZK-03','ZK-04','ZK-05','ZK-06','ZK-07','ZK-08','ZK-09','ZK-10','ZK-11','ZK-12','ZK-13']
 const makeRows = (mapper) => boreholeCodes.map((code, index) => ({ id:index + 1, code, ...mapper(index, code) }))
 
-const configs = {
+const configs = reactive({
   'cag-view-borehole': {
     columns: [
       ['id','序号',58], ['favorite','收藏',64], ['code','钻孔编号',130], ['type','钻孔类型',210],
@@ -62,19 +63,77 @@ const configs = {
     columns: [['id','序号',70],['code','样品编号',150],['total','易溶盐总量(%)',180],['carbonate','碳酸根(%)',160],['chloride','氯离子(%)',160],['sulfate','硫酸根(%)',160],['status','状态',130],['report','报告',100]],
     rows: makeRows((i, code) => ({ code:`${code}-Y${i + 1}`, total:(0.12 + i * 0.008).toFixed(3), carbonate:(0.015 + i * 0.001).toFixed(3), chloride:(0.028 + i * 0.002).toFixed(3), sulfate:(0.034 + i * 0.002).toFixed(3), status:'已完成', report:'查看' })),
   },
-}
+})
 
 const activeCommand = ref(configs[props.command] ? props.command : 'cag-view-borehole')
 const page = ref(1)
 const pageSize = ref(10)
 const config = computed(() => configs[activeCommand.value])
 const rows = computed(() => config.value.rows.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
+const selectedRows = ref([])
+const editorVisible = ref(false)
+const editingRow = ref(null)
+const editorForm = reactive({})
+const actionFields = new Set(['favorite', 'layerAction', 'waterAction', 'report', 'record'])
+const editableColumns = computed(() => config.value.columns.filter(([key]) => key !== 'id' && !actionFields.has(key)))
+const editorTitle = computed(() => editingRow.value ? '编辑数据' : '新增数据')
+
+const resetEditorForm = (row = {}) => {
+  Object.keys(editorForm).forEach((key) => delete editorForm[key])
+  editableColumns.value.forEach(([key]) => { editorForm[key] = row[key] ?? '' })
+}
+
+const openAdd = () => {
+  editingRow.value = null
+  resetEditorForm()
+  editorVisible.value = true
+}
+
+const openEdit = (row) => {
+  editingRow.value = row
+  resetEditorForm(row)
+  editorVisible.value = true
+}
+
+const saveEditor = () => {
+  const requiredKey = editableColumns.value[0]?.[0]
+  if (requiredKey && !String(editorForm[requiredKey] ?? '').trim()) {
+    ElMessage.warning(`请填写${editableColumns.value[0][1]}`)
+    return
+  }
+  if (editingRow.value) {
+    Object.assign(editingRow.value, editorForm)
+    ElMessage.success('数据已更新')
+  } else {
+    const maxId = config.value.rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0)
+    config.value.rows.push({ id: maxId + 1, ...editorForm })
+    page.value = Math.ceil(config.value.rows.length / pageSize.value)
+    ElMessage.success('数据已新增')
+  }
+  editorVisible.value = false
+}
+
+const removeRows = async (targets) => {
+  if (!targets.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${targets.length} 条数据吗？`, '删除确认', {
+      type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消',
+    })
+  } catch { return }
+  const targetSet = new Set(targets)
+  config.value.rows = config.value.rows.filter((row) => !targetSet.has(row))
+  selectedRows.value = []
+  const maxPage = Math.max(1, Math.ceil(config.value.rows.length / pageSize.value))
+  page.value = Math.min(page.value, maxPage)
+  ElMessage.success('数据已删除')
+}
 
 watch(() => props.command, (command) => {
   if (configs[command]) activeCommand.value = command
 })
 watch(activeCommand, (command) => {
   page.value = 1
+  selectedRows.value = []
   emit('select', tabs.find((tab) => tab.id === command)?.label || '数据查看')
 })
 watch(pageSize, () => { page.value = 1 })
@@ -91,9 +150,21 @@ watch(pageSize, () => { page.value = 1 })
         <div class="data-title">
           <el-icon class="data-title-icon"><List /></el-icon>
           <span>数据列表</span>
+          <div class="data-actions">
+            <el-button type="primary" :icon="Plus" @click="openAdd">新增</el-button>
+            <el-button :icon="Delete" :disabled="!selectedRows.length" @click="removeRows(selectedRows)">删除</el-button>
+          </div>
         </div>
 
-        <el-table :data="rows" stripe border height="calc(100% - 128px)" class="data-table">
+        <el-table
+          :data="rows"
+          stripe
+          border
+          height="calc(100% - 128px)"
+          class="data-table"
+          @selection-change="(selection) => (selectedRows = selection)"
+        >
+          <el-table-column type="selection" width="48" align="center" />
           <el-table-column
             v-for="column in config.columns"
             :key="column[0]"
@@ -106,6 +177,12 @@ watch(pageSize, () => { page.value = 1 })
             <template #default="scope">
               <el-button v-if="['查看'].includes(scope.row[column[0]])" link type="primary">查看</el-button>
               <span v-else :class="{ favorite: column[0] === 'favorite' }">{{ scope.row[column[0]] }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="130" fixed="right" align="center">
+            <template #default="scope">
+              <el-button link type="primary" :icon="Edit" @click="openEdit(scope.row)">编辑</el-button>
+              <el-button link type="danger" :icon="Delete" @click="removeRows([scope.row])">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -121,6 +198,23 @@ watch(pageSize, () => { page.value = 1 })
           />
         </div>
       </div>
+
+      <el-dialog v-model="editorVisible" :title="editorTitle" width="560px" align-center destroy-on-close>
+        <el-form label-position="right" label-width="120px" class="editor-form">
+          <el-form-item v-for="column in editableColumns" :key="column[0]" :label="column[1]">
+            <el-input
+              v-model="editorForm[column[0]]"
+              :type="column[0] === 'description' || column[0] === 'note' ? 'textarea' : 'text'"
+              :rows="3"
+              clearable
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editorVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveEditor">保存</el-button>
+        </template>
+      </el-dialog>
     </div>
   </el-config-provider>
 </template>
@@ -151,6 +245,8 @@ watch(pageSize, () => { page.value = 1 })
 :deep(.data-tabs .el-tabs__item.is-active) { color: #409eff; }
 .data-title { height: 52px; display: flex; align-items: center; gap: 9px; color: #3e4654; font-size: 16px; font-weight: 700; }
 .data-title-icon { color: #409eff; font-size: 20px; }
+.data-actions { margin-left: auto; display: flex; gap: 8px; }
+.editor-form { max-height: 58vh; padding-right: 8px; overflow: auto; }
 .data-table {
   width: 100%;
   background: #fff;
