@@ -3,23 +3,28 @@
  * - personas: 7 个角色（含默认导航/可见导航/界面形态/聚焦阶段）
  * - flowStages: 8 节点勘察主线（参考图1流程）
  * - stageAccess: 各阶段办理岗位（角色门禁）
- * - projects: 项目列表（roles 表示哪些角色参与该项目）
+ * - projects: 项目列表（userRoles 可覆盖演示账号在单个项目中的角色）
  * - todos / results: 按角色的待办与项目成果（含专题2自动审核报告）
  */
 
 /** 角色配置 —— 决定进入项目后看到什么 */
 export const personas = {
-  leader:    { id:'leader',    name:'张明', title:'项目负责人', avatar:'张', defaultNav:'overview', navs:['overview','info','files','quality','design','survey','recon','log','explore','soil','test','product','monitor','field','video','ibgi','map','result','todo'], mode:'cockpit',   focusStage:'s7', desc:'项目全貌 · 全流程进度与卡点' },
-  engineer:  { id:'engineer',  name:'孙伟', title:'项目工程师', avatar:'孙', defaultNav:'stage',    navs:['overview','stage','files','quality','design','survey','recon','log','explore','soil','test','product','monitor','field','video','ibgi','map','result','todo'], mode:'workspace', focusStage:'s7', desc:'内业整理阶段 · 转接 CAG 系统' },
-  reviewer:  { id:'reviewer',  name:'黄磊', title:'项目审核人', avatar:'黄', defaultNav:'todo',      navs:['overview','files','quality','result','todo'],                  mode:'cockpit',   focusStage:'s8', desc:'流程待办 · 专题2 自动审核报告' },
-  approver:  { id:'approver',  name:'陈总', title:'项目审定人', avatar:'陈', defaultNav:'todo',      navs:['overview','files','quality','result','todo'],                  mode:'cockpit',   focusStage:'s8', desc:'流程待办 · 勘察报告终审定' },
-  marketing: { id:'marketing', name:'李华', title:'营销经理',   avatar:'李', defaultNav:'result',    navs:['overview','result','todo'],                                  mode:'cockpit',   focusStage:'s8', desc:'成果中心 · 经营关注事项' },
-  surveyor:  { id:'surveyor',  name:'王强', title:'测量工程师', avatar:'王', defaultNav:'survey',    navs:['overview','survey','recon','field','video','map','result','todo'], mode:'workspace', focusStage:'s4', desc:'测量放线 · 坐标复核' },
-  pipeline:  { id:'pipeline',  name:'刘洋', title:'管线探测员', avatar:'刘', defaultNav:'recon',     navs:['overview','recon','explore','soil','field','video','result','todo'], mode:'workspace', focusStage:'s3', desc:'现场辨识/野外勘探 · 探测成果' },
+  leader:    { id:'leader',    name:'张明', title:'项目负责人', avatar:'张', defaultRole:'leader',    defaultNav:'overview', navs:['overview','info','files','quality','design','survey','recon','log','explore','soil','test','product','monitor','field','video','ibgi','map','result','todo'], mode:'cockpit',   focusStage:'s7', desc:'项目全貌 · 全流程进度与卡点' },
+  engineer:  { id:'engineer',  name:'孙伟', title:'项目工程师', avatar:'孙', defaultRole:'engineer',  defaultNav:'stage',    navs:['overview','stage','files','quality','design','survey','recon','log','explore','soil','test','product','monitor','field','video','ibgi','map','result','todo'], mode:'workspace', focusStage:'s7', desc:'内业整理阶段 · 转接 CAG 系统' },
+  reviewer:  { id:'reviewer',  name:'黄磊', title:'项目审核人', avatar:'黄', defaultRole:'reviewer',  defaultNav:'todo',     navs:['overview','files','quality','result','todo'],                  mode:'cockpit',   focusStage:'s8', desc:'流程待办 · 专题2 自动审核报告' },
+  approver:  { id:'approver',  name:'陈总', title:'项目审定人', avatar:'陈', defaultRole:'approver',  defaultNav:'todo',     navs:['overview','files','quality','result','todo'],                  mode:'cockpit',   focusStage:'s8', desc:'流程待办 · 勘察报告终审定' },
+  marketing: { id:'marketing', name:'李华', title:'营销经理',   avatar:'李', defaultRole:'marketing', defaultNav:'result',   navs:['overview','result','todo'],                                  mode:'cockpit',   focusStage:'s8', desc:'成果中心 · 经营关注事项' },
+  surveyor:  { id:'surveyor',  name:'王强', title:'测量工程师', avatar:'王', defaultRole:'surveyor',  defaultNav:'survey',   navs:['overview','survey','recon','field','video','map','result','todo'], mode:'workspace', focusStage:'s4', desc:'测量放线 · 坐标复核' },
+  pipeline:  { id:'pipeline',  name:'刘洋', title:'管线探测员', avatar:'刘', defaultRole:'pipeline',  defaultNav:'recon',    navs:['overview','recon','explore','soil','field','video','result','todo'], mode:'workspace', focusStage:'s3', desc:'现场辨识/野外勘探 · 探测成果' },
 }
 
 /** 角色下拉（登录页用） */
 export const personaList = Object.values(personas)
+
+/** 项目角色定义不包含人员姓名和头像，登录身份与项目权限分别使用。 */
+export const roleDefinitions = Object.fromEntries(personaList.map(({
+  id, title, defaultNav, navs, mode, focusStage, desc,
+}) => [id, { id, title, defaultNav, navs, mode, focusStage, desc }]))
 
 /** 6 节点勘察主线（去掉「启动」「水土试验」阶段） */
 export const flowStages = [
@@ -47,11 +52,11 @@ export const stageStatus = {
   s7: 'doing', s8: 'todo',
 }
 
-/** 项目列表 —— roles 表示哪些角色参与该项目（用于"看到自己参与的项目"） */
+/** 项目列表 —— roles 为项目岗位；userRoles 为账号在该项目中的角色覆盖。 */
 export const projects = [
   { id:'p1',  name:'山区复杂地质三维建模',   category:'市政勘察', stageId:'s7', status:'内业整理中', progress:72, city:'北京·门头沟', coords:{x:120,y:140}, roles:['leader','engineer','reviewer','approver','surveyor','pipeline'], members:28, deadline:'2026-09-30', desc:'山区复杂地质条件下三维地质建模与勘察一体化示范' },
-  { id:'p2',  name:'地铁17号线岩土工程勘察',  category:'轨道交通', stageId:'s5', status:'野外勘探中', progress:45, city:'北京·朝阳',   coords:{x:300,y:90},  roles:['leader','engineer','surveyor'],                              members:15, deadline:'2026-11-15', desc:'轨道交通沿线岩土工程详细勘察' },
-  { id:'p3',  name:'CBD高层建筑地基勘察',     category:'建筑勘察', stageId:'s8', status:'待审定',     progress:90, city:'天津·滨海',   coords:{x:480,y:220}, roles:['leader','reviewer','approver','marketing'],                  members:10, deadline:'2026-08-20', desc:'超高层建筑地基勘察与基础方案论证' },
+  { id:'p2',  name:'地铁17号线岩土工程勘察',  category:'轨道交通', stageId:'s5', status:'野外勘探中', progress:45, city:'北京·朝阳',   coords:{x:300,y:90},  roles:['leader','engineer','surveyor'], userRoles:{ leader:'engineer' }, members:15, deadline:'2026-11-15', desc:'轨道交通沿线岩土工程详细勘察' },
+  { id:'p3',  name:'CBD高层建筑地基勘察',     category:'建筑勘察', stageId:'s8', status:'待审定',     progress:90, city:'天津·滨海',   coords:{x:480,y:220}, roles:['leader','reviewer','approver','marketing'], userRoles:{ leader:'approver' }, members:10, deadline:'2026-08-20', desc:'超高层建筑地基勘察与基础方案论证' },
   { id:'p4',  name:'水库坝基工程地质勘察',     category:'水利勘察', stageId:'s2', status:'纲要策划中', progress:12, city:'河北·保定',   coords:{x:200,y:300}, roles:['leader','engineer'],                                         members:6,  deadline:'2027-03-01', desc:'水库坝基工程地质勘察前期' },
   { id:'p5',  name:'市政道路改扩建勘察',       category:'市政勘察', stageId:'s7', status:'内业整理中', progress:60, city:'北京·海淀',   coords:{x:360,y:260}, roles:['engineer','pipeline','surveyor'],                            members:12, deadline:'2026-10-10', desc:'城市主干路改扩建岩土工程勘察' },
   { id:'p6',  name:'跨河桥梁工程勘察',         category:'交通勘察', stageId:'s4', status:'测量放线中', progress:30, city:'北京·丰台',   coords:{x:90,y:260},  roles:['engineer','surveyor'],                                       members:8,  deadline:'2026-12-20', desc:'跨河特大桥岩土工程勘察' },

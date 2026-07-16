@@ -1,12 +1,12 @@
 <script setup>
 /**
  * 登录页 · 一体化平台
- * 深色 + 品牌红强调；含角色选择（模拟不同人登录，演示角色驱动）
+ * 深色 + 品牌红强调；选择演示人员，项目角色在进入项目后确定
  */
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Key, Right } from '@element-plus/icons-vue'
-import { personaList } from '../data/mockData'
+import { User, Lock, Key, Right, Connection } from '@element-plus/icons-vue'
+import { personaList, projects, roleDefinitions } from '../data/mockData'
 import { useAppStore } from '../store/useAppStore'
 
 const { login } = useAppStore()
@@ -17,6 +17,17 @@ const selectedRole = ref('leader')
 const loading = ref(false)
 
 const currentPersona = computed(() => personaList.find((p) => p.id === selectedRole.value))
+const roleIdsForPersona = (persona) => [...new Set(projects.map((project) => (
+  project.userRoles?.[persona.id] || persona.defaultRole
+)))]
+const roleTitlesForPersona = (persona) => roleIdsForPersona(persona)
+  .map((roleId) => roleDefinitions[roleId]?.title)
+  .filter(Boolean)
+const isHighlightedMultiRole = (persona) => roleIdsForPersona(persona).length >= 3
+const currentPersonaDesc = computed(() => {
+  if (!isHighlightedMultiRole(currentPersona.value)) return currentPersona.value.desc
+  return `跨项目角色：${roleTitlesForPersona(currentPersona.value).join(' / ')}`
+})
 
 const refreshCaptcha = () => {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -33,7 +44,7 @@ const onLogin = () => {
   setTimeout(() => {
     loading.value = false
     login(selectedRole.value)
-    ElMessage.success(`欢迎，${currentPersona.value.title} ${currentPersona.value.name}`)
+    ElMessage.success(`欢迎，${currentPersona.value.name}`)
   }, 600)
 }
 </script>
@@ -67,10 +78,10 @@ const onLogin = () => {
     <div class="login-card">
       <div class="lc-head">
         <div class="lc-title">账号登录</div>
-        <div class="lc-sub">请选择您的角色以进入对应工作台</div>
+        <div class="lc-sub">请选择演示人员，项目角色将在进入项目后确定</div>
       </div>
 
-      <!-- 角色选择 -->
+      <!-- 演示人员选择 -->
       <div class="role-grid">
         <div
           v-for="p in personaList"
@@ -84,12 +95,19 @@ const onLogin = () => {
             <span class="rc-title">{{ p.title }}</span>
             <span class="rc-name">{{ p.name }}</span>
           </span>
+          <el-tooltip
+            v-if="isHighlightedMultiRole(p)"
+            :content="roleTitlesForPersona(p).join(' / ')"
+            placement="top"
+          >
+            <span class="rc-multi-role"><el-icon><Connection /></el-icon>3种角色</span>
+          </el-tooltip>
         </div>
       </div>
 
       <!-- 当前角色说明 -->
       <div class="role-desc">
-        <span class="rd-tag">{{ currentPersona.desc }}</span>
+        <span class="rd-tag" :class="{ 'is-multi': isHighlightedMultiRole(currentPersona) }">{{ currentPersonaDesc }}</span>
       </div>
 
       <!-- 登录表单 -->
@@ -224,12 +242,25 @@ const onLogin = () => {
 .rc-info { display: flex; flex-direction: column; min-width: 0; }
 .rc-title { color: #e0e4ed; font-size: 12px; font-weight: 600; }
 .rc-name { color: rgba(255,255,255,0.4); font-size: 11px; }
+.rc-multi-role {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 5px; border-radius: 4px;
+  color: #fbbf24; background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.36);
+  font-size: 9px; font-weight: 700; white-space: nowrap;
+}
+.rc-multi-role .el-icon { font-size: 11px; }
 
 .role-desc { margin-bottom: 18px; }
 .rd-tag {
   display: inline-block; padding: 5px 12px; border-radius: 6px;
   background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3);
   color: #6cb6ff; font-size: 12px;
+}
+.rd-tag.is-multi {
+  color: #fbbf24; background: rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.32);
 }
 
 .lc-form { display: flex; flex-direction: column; gap: 12px; }

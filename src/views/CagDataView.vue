@@ -13,7 +13,7 @@ const tabs = [
   { id:'cag-view-water', label:'水位信息' },
   { id:'cag-view-soil', label:'常规土试' },
   { id:'cag-view-special-soil', label:'特殊土试' },
-  { id:'cag-view-demo-test', label:'演示实验' },
+  { id:'cag-view-demo-test', label:'岩石实验' },
   { id:'cag-view-water-quality', label:'水质分析' },
   { id:'cag-view-soluble-salt', label:'水的易溶盐' },
 ]

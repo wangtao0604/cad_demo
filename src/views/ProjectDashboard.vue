@@ -1,32 +1,52 @@
 <script setup>
 /**
- * 项目看板 · 项目负责人使用驾驶舱 / 列表，其他角色使用列表 / 地图
- * 只显示当前用户参与的项目（按角色过滤）
+ * 项目看板 · 登录身份固定，每张项目卡按项目角色展示和进入
  */
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Search, DataBoard, Grid, MapLocation, SwitchButton, Aim, Document, TrendCharts } from '@element-plus/icons-vue'
+import { ref, computed, watch } from 'vue'
+import { Search, DataBoard, Grid, MapLocation, SwitchButton, Aim, Document, TrendCharts, User } from '@element-plus/icons-vue'
 import { useAppStore } from '../store/useAppStore'
-import { personas, flowStages, categories, projects as allProjects } from '../data/mockData'
+import { flowStages, categories } from '../data/mockData'
 import LeaderDashboard from '../components/LeaderDashboard.vue'
 
-const { state, user, myProjects, openProject, logout } = useAppStore()
+const {
+  user, myProjects, hasLeaderProjects, hasNonLeaderProjects,
+  roleForProject, openProject, logout,
+} = useAppStore()
 
 const viewMode = ref('list') // dashboard | list | map
 const catFilter = ref('全部')
 const stageFilter = ref('全部')
+const roleFilter = ref('全部')
 const search = ref('')
+
+watch(viewMode, (mode) => {
+  if (mode === 'map' && roleFilter.value === 'leader') roleFilter.value = '全部'
+})
 
 const stageName = (id) => flowStages.find((s) => s.id === id)?.name || '-'
 const stageShort = (id) => flowStages.find((s) => s.id === id)?.short || '-'
 
-/** 阶段筛选项：全部 + 8 个流程阶段 */
 const stageOptions = [
   { label: '全部阶段', value: '全部' },
   ...flowStages.map((s) => ({ label: s.name, value: s.id })),
 ]
+const roleOptions = computed(() => {
+  const roles = new Map()
+  myProjects.value.forEach((project) => {
+    const role = roleForProject(project)
+    const item = roles.get(role.id) || { value: role.id, title: role.title, count: 0 }
+    item.count += 1
+    roles.set(role.id, item)
+  })
+  return [
+    { label: '全部角色', value: '全部' },
+    ...[...roles.values()].map((role) => ({
+      label: `${role.title}（${role.count}）`,
+      value: role.value,
+    })),
+  ]
+})
 
-/** 阶段配色（与驾驶舱流程节点一致） */
 const stageColor = (id) => {
   const m = {
     s2: '#4a9eff', s3: '#a855f7', s4: '#06b6d4',
@@ -35,12 +55,32 @@ const stageColor = (id) => {
   return m[id] || '#6b7280'
 }
 
-const filtered = computed(() => {
+const baseFiltered = computed(() => {
   let list = myProjects.value
   if (catFilter.value !== '全部') list = list.filter((p) => p.category === catFilter.value)
   if (stageFilter.value !== '全部') list = list.filter((p) => p.stageId === stageFilter.value)
   if (search.value) list = list.filter((p) => p.name.includes(search.value) || p.city.includes(search.value))
   return list
+})
+const filtered = computed(() => {
+  if (roleFilter.value === '全部') return baseFiltered.value
+  return baseFiltered.value.filter((p) => roleForProject(p).id === roleFilter.value)
+})
+const roleFilterModel = computed({
+  get: () => viewMode.value === 'dashboard' ? 'leader' : roleFilter.value,
+  set: (value) => { roleFilter.value = value },
+})
+const leaderProjects = computed(() => baseFiltered.value.filter((p) => roleForProject(p).id === 'leader'))
+const nonLeaderProjects = computed(() => filtered.value.filter((p) => roleForProject(p).id !== 'leader'))
+const projectCountLabel = computed(() => viewMode.value === 'dashboard' ? '负责项目' : '我的项目')
+const displayedProjectCount = computed(() => {
+  if (viewMode.value === 'dashboard') return leaderProjects.value.length
+  if (viewMode.value === 'map') return nonLeaderProjects.value.length
+  return filtered.value.length
+})
+const accountRoleLabel = computed(() => {
+  const titles = new Set(myProjects.value.map((p) => roleForProject(p).title))
+  return titles.size > 1 ? `参与 ${titles.size} 种项目角色` : [...titles][0] || '项目成员'
 })
 
 const catColor = (cat) => {
@@ -64,7 +104,6 @@ const onLogout = () => {
 
 <template>
   <div class="dash-page">
-    <!-- 顶部标题栏 -->
     <header class="dash-header">
       <div class="dh-left">
         <div class="dh-logo">勘</div>
@@ -78,17 +117,16 @@ const onLogout = () => {
           <span class="dh-avatar">{{ user.avatar }}</span>
           <div class="dh-userinfo">
             <span class="dh-name">{{ user.name }}</span>
-            <span class="dh-role">{{ user.title }}</span>
+            <span class="dh-role">{{ accountRoleLabel }}</span>
           </div>
         </div>
         <el-button :icon="SwitchButton" circle @click="onLogout" title="退出登录" />
       </div>
     </header>
 
-    <!-- 工具条 -->
     <div class="dash-toolbar">
       <div class="dt-left">
-        <span class="dt-label">我的项目（{{ filtered.length }}）</span>
+        <span class="dt-label">{{ projectCountLabel }}（{{ displayedProjectCount }}）</span>
         <el-select v-model="catFilter" size="default" style="width:140px">
           <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
         </el-select>
@@ -101,23 +139,31 @@ const onLogout = () => {
             <span>{{ s.label }}</span>
           </el-option>
         </el-select>
+        <el-select
+          v-model="roleFilterModel"
+          size="default"
+          style="width:160px"
+          placeholder="按角色筛选"
+          :disabled="viewMode === 'dashboard'"
+        >
+          <template #prefix><el-icon><User /></el-icon></template>
+          <el-option v-for="role in roleOptions" :key="role.value" :label="role.label" :value="role.value" />
+        </el-select>
         <el-input v-model="search" placeholder="搜索项目/城市" :prefix-icon="Search" style="width:200px" clearable />
       </div>
       <div class="dt-right">
         <el-radio-group v-model="viewMode" size="default">
-          <el-radio-button v-if="user.id === 'leader'" value="dashboard"><el-icon><DataBoard /></el-icon>&nbsp;驾驶舱</el-radio-button>
+          <el-radio-button v-if="hasLeaderProjects" value="dashboard"><el-icon><DataBoard /></el-icon>&nbsp;驾驶舱</el-radio-button>
           <el-radio-button value="list"><el-icon><Grid /></el-icon>&nbsp;列表</el-radio-button>
-          <el-radio-button v-if="user.id !== 'leader'" value="map"><el-icon><MapLocation /></el-icon>&nbsp;地图</el-radio-button>
+          <el-radio-button v-if="hasNonLeaderProjects" value="map"><el-icon><MapLocation /></el-icon>&nbsp;地图</el-radio-button>
         </el-radio-group>
       </div>
     </div>
 
-    <!-- 项目级全局驾驶舱（进入具体项目之前） -->
     <div v-if="viewMode === 'dashboard'" class="dash-cockpit">
-      <LeaderDashboard :projects="filtered" :user="user" @open-project="openProject" />
+      <LeaderDashboard :projects="leaderProjects" :user="user" @open-project="openProject" />
     </div>
 
-    <!-- 列表视图 -->
     <div v-else-if="viewMode === 'list'" class="dash-list">
       <div v-for="p in filtered" :key="p.id" class="proj-card" @click="onOpen(p)">
         <div class="pc-top">
@@ -141,14 +187,13 @@ const onLogout = () => {
           <span class="pc-pct">{{ p.progress }}%</span>
         </div>
         <div class="pc-foot">
-          <span class="pc-role">我的角色：{{ user.title }}</span>
+          <span class="pc-role">我的角色：{{ roleForProject(p).title }}</span>
           <span class="pc-deadline">截止 {{ p.deadline }}</span>
         </div>
       </div>
       <div v-if="filtered.length === 0" class="empty-state">暂无参与的项目</div>
     </div>
 
-    <!-- 地图视图：项目负责人已有全局分布态势，仅其他角色保留 -->
     <div v-else class="dash-map">
       <div class="map-canvas">
         <svg viewBox="0 0 600 400" class="map-svg">
@@ -159,7 +204,7 @@ const onLogout = () => {
           </defs>
           <rect width="600" height="400" fill="url(#grid)" />
           <path d="M80,120 Q200,80 320,110 T540,160 Q560,260 460,310 T200,330 Q100,300 80,200 Z" fill="rgba(74,158,255,0.04)" stroke="rgba(74,158,255,0.18)" stroke-width="1.5" />
-          <g v-for="p in filtered" :key="p.id" class="map-pt" @click="onOpen(p)">
+          <g v-for="p in nonLeaderProjects" :key="p.id" class="map-pt" @click="onOpen(p)">
             <circle :cx="p.coords.x" :cy="p.coords.y" :r="22" fill="none" :stroke="stageColor(p.stageId)" stroke-width="2" opacity="0.75" />
             <circle :cx="p.coords.x" :cy="p.coords.y" :r="18" :fill="catColor(p.category) + '22'" :stroke="catColor(p.category)" stroke-width="1.5" />
             <circle :cx="p.coords.x" :cy="p.coords.y" :r="6" :fill="catColor(p.category)" />
@@ -175,7 +220,6 @@ const onLogout = () => {
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -200,12 +244,13 @@ const onLogout = () => {
 .dh-role { color: rgba(255,255,255,0.4); font-size: 11px; }
 
 .dash-toolbar {
-  height: 56px; flex-shrink: 0;
+  min-height: 56px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px;
+  gap: 12px; padding: 8px 24px;
   background: #13161e; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-.dt-left { display: flex; align-items: center; gap: 12px; }
+.dt-left { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.dt-right { flex-shrink: 0; }
 .dt-label { color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 600; }
 .dash-cockpit { flex: 1; min-height: 0; overflow: hidden; }
 

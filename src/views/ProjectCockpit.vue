@@ -25,12 +25,13 @@ import ResultPanel from '../components/ResultPanel.vue'
 import IbgiPane from './IbgiPane.vue'
 
 const {
-  state, user, currentProject, currentStage, currentProjectStageStatus,
+  state, user, currentProject, currentProjectRole, currentProjectRoleId,
+  currentStage, currentProjectStageStatus,
   setStage, setCockpitTab, setStageFunc, enterWorkspace, logout,
 } = useAppStore()
 
-const isLeader = computed(() => user.value.id === 'leader')
-const isEngineer = computed(() => user.value.id === 'engineer')
+const isLeader = computed(() => currentProjectRoleId.value === 'leader')
+const isEngineer = computed(() => currentProjectRoleId.value === 'engineer')
 const stageName = (id) => flowStages.find((s) => s.id === id)?.name || '-'
 
 // 图标名 → 组件
@@ -220,13 +221,13 @@ const ibgiTitle = computed(() => '工程信息')
 // —— 待办 / 成果：待办在驾驶舱汇总，成果始终跟随当前流程阶段。——
 const todoItems = computed(() => {
   if (!canAccessStage(state.currentStageId)) return []
-  const all = todos[user.value.id] || []
+  const all = todos[currentProjectRoleId.value] || []
   return isOverview.value ? all : all.filter((t) => t.stageId === state.currentStageId)
 })
 const stageTodoItems = computed(() => todoItems.value.filter((t) => t.stageId === state.currentStageId))
 const resultItems = computed(() => {
   if (!canAccessStage(state.currentStageId)) return []
-  const vis = (r) => !r.roles || r.roles.includes(user.value.id)
+  const vis = (r) => !r.roles || r.roles.includes(currentProjectRoleId.value)
   return results.filter((r) => r.stageId === state.currentStageId && vis(r))
 })
 
@@ -293,7 +294,7 @@ const onResultView = (r) => {
 
 const canAccessStage = (stageId) => {
   const acc = stageAccess[stageId]
-  return acc ? acc.includes(user.value.id) : false
+  return acc ? acc.includes(currentProjectRoleId.value) : false
 }
 
 const onBack = () => { state.view = 'dashboard' }
@@ -330,7 +331,7 @@ const stageMetrics = computed(() => [
           <span class="cp-avatar">{{ user.avatar }}</span>
           <div class="cp-userinfo">
             <span class="cp-name">{{ user.name }}</span>
-            <span class="cp-role">{{ user.title }}</span>
+            <span class="cp-role">{{ currentProjectRole.title }}</span>
           </div>
         </div>
         <el-button text @click="onLogout">退出</el-button>
@@ -343,7 +344,7 @@ const stageMetrics = computed(() => [
       :current-id="state.currentStageId"
       :status-map="currentProjectStageStatus"
       :access-map="stageAccess"
-      :role="user.id"
+      :role="currentProjectRoleId"
       @select="onFlowSelect"
     />
 
@@ -407,7 +408,7 @@ const stageMetrics = computed(() => [
                 <span class="bc-sub">{{ resultItems.length }} 项</span>
                 <el-button v-if="resultItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('result')">全部</el-button>
               </div>
-              <ResultPanel :results="resultItems" :role="user.id" @view="onResultView" />
+              <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
             </div>
           </div>
         </div>
@@ -454,7 +455,7 @@ const stageMetrics = computed(() => [
               <div class="bc-head"><span class="bc-title">本阶段成果</span><span class="bc-sub">{{ resultItems.length }} 项</span>
                 <el-button v-if="resultItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('result')">全部</el-button>
               </div>
-              <ResultPanel :results="resultItems" :role="user.id" @view="onResultView" />
+              <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
             </div>
           </div>
         </div>
@@ -467,7 +468,12 @@ const stageMetrics = computed(() => [
               <span class="bc-sub">i北勘 · 仅项目负责人可见</span>
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
-            <IbgiPane :project-name="currentProject.name" :url="ibgiUrl" />
+            <IbgiPane
+              :project-name="currentProject.name"
+              :url="ibgiUrl"
+              :user-name="user.name"
+              :role-title="currentProjectRole.title"
+            />
           </div>
         </div>
 
@@ -528,7 +534,7 @@ const stageMetrics = computed(() => [
           <div class="block-card">
             <div class="bc-head">
               <span class="bc-title">{{ isOverview ? '流程待办' : currentStage.name + ' · 待办' }}</span>
-              <span class="bc-sub">{{ user.title }} · {{ todoItems.length }} 项</span>
+              <span class="bc-sub">{{ currentProjectRole.title }} · {{ todoItems.length }} 项</span>
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
             <TodoPanel :items="todoItems" @handle="onTodoHandle" />
@@ -543,7 +549,7 @@ const stageMetrics = computed(() => [
               <span class="bc-sub">模型 / 文档 / 报告 / 图件</span>
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
-            <ResultPanel :results="resultItems" :role="user.id" @view="onResultView" />
+            <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
           </div>
         </div>
 

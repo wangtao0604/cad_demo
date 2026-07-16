@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { MlRibbon } from '@mlightcad/ribbon'
 import {
   ArrowLeft, Lock, FolderOpened, Aim, Upload, Coffee, Connection,
-  EditPen, Share, View, DataAnalysis, Operation, Grid,
+  Edit, EditPen, Share, View, DataAnalysis, Operation, Grid,
 } from '@element-plus/icons-vue'
 import ProjectTree from '../components/ProjectTree.vue'
 import StatusBar from '../components/StatusBar.vue'
@@ -22,13 +22,15 @@ import { buildRibbonForRole, fileMenuItems } from '../data/ribbonConfig'
 import { buildTreeForRole } from '../data/treeData'
 import { useAppStore } from '../store/useAppStore'
 
-const { state, user, currentProject, backToCockpit } = useAppStore()
+const {
+  state, user, currentProject, currentProjectRole, currentProjectRoleId, backToCockpit,
+} = useAppStore()
 
 // 内联模式：嵌入驾驶舱内容区时隐藏顶部返回条、撑满父级
 const props = defineProps({ embedded: { type: Boolean, default: false } })
 
 // 角色驱动的 ribbon / 树
-const ribbon = computed(() => buildRibbonForRole(user.value.id))
+const ribbon = computed(() => buildRibbonForRole(currentProjectRoleId.value))
 const placementMode = ref(['placement', 'borehole-place'].includes(state.workspaceTarget))
 const placementTabs = [{
   id: 'placement',
@@ -47,9 +49,9 @@ const placementTabs = [{
 }]
 const cagMode = ref(state.workspaceTarget === 'cag')
 const cagCommandLabels = {
-  'cag-soil-test':'水土试验', 'cag-auto-layer':'自动连层', 'cag-manual-layer':'手动连层', 'cag-section-settings':'剖面设置',
+  'cag-soil-test':'水土试验', 'cag-auto-layer':'自动分层', 'cag-manual-layer':'手动分层', 'cag-section-settings':'剖面设置',
   'cag-view-layer':'综合分层', 'cag-view-borehole':'钻孔信息', 'cag-view-geology':'地质描述', 'cag-view-water':'水位信息',
-  'cag-view-soil':'常规土试', 'cag-view-special-soil':'特殊土试', 'cag-view-demo-test':'演示实验', 'cag-view-water-quality':'水质分析', 'cag-view-soluble-salt':'水的易溶盐',
+  'cag-view-soil':'常规土试', 'cag-view-special-soil':'特殊土试', 'cag-view-demo-test':'岩石实验', 'cag-view-water-quality':'水质分析', 'cag-view-soluble-salt':'水的易溶盐',
   'cag-stat-soil':'常规土试', 'cag-stat-in-situ':'原位测试', 'cag-stat-jk':'综合统计JK', 'cag-stat-sk':'综合统计SK', 'cag-stat-borehole-layer':'钻孔&地层',
   'cag-stat-rebound':'回弹再压缩', 'cag-stat-high-pressure':'高压固结', 'cag-stat-rock':'岩石试验', 'cag-stat-dt':'综合统计DT', 'cag-stat-single-settle':'单孔结算',
   'cag-stat-water-level':'钻孔水位', 'cag-stat-layer-elevation':'地层标高', 'cag-stat-workload':'工作量', 'cag-stat-overview':'勘探点总览', 'cag-stat-single-workload':'单孔工作量',
@@ -68,12 +70,10 @@ const cagTabs = [{
       id: 'c-cag-actions',
       items: [
         { id:'cag-soil-test', type:'button', label:'水土试验', size:'large', icon:Coffee },
-        { id:'cag-auto-layer', type:'button', label:'自动连层', size:'large', icon:Connection },
-        { id:'cag-manual-layer', type:'button', label:'手动连层', size:'large', icon:EditPen },
+        { id:'cag-auto-layer', type:'button', label:'自动分层', size:'large', icon:Connection },
+        { id:'cag-manual-layer', type:'button', label:'手动分层', size:'large', icon:EditPen },
         { id:'cag-section-settings', type:'button', label:'剖面设置', size:'large', icon:Share },
-        { id:'cag-view', type:'dropdown', label:'查看', size:'large', icon:View, props:{ syncLabelWithSelection:false, options:dropdownOptions([
-          'cag-view-layer','cag-view-borehole','cag-view-geology','cag-view-water','cag-view-soil','cag-view-special-soil','cag-view-demo-test','cag-view-water-quality','cag-view-soluble-salt',
-        ]) } },
+        { id:'cag-view', type:'button', label:'编辑数据', size:'large', icon:Edit },
         { id:'cag-stat', type:'dropdown', label:'统计', size:'large', icon:DataAnalysis, props:{ syncLabelWithSelection:false, options:dropdownOptions([
           'cag-stat-soil','cag-stat-in-situ','cag-stat-jk','cag-stat-sk','cag-stat-borehole-layer','cag-stat-rebound','cag-stat-high-pressure','cag-stat-rock','cag-stat-dt','cag-stat-single-settle','cag-stat-water-level','cag-stat-layer-elevation','cag-stat-workload','cag-stat-overview','cag-stat-single-workload','cag-stat-record-a3','cag-stat-record-a4','cag-stat-record-hole','cag-stat-field-workload','cag-stat-field-settle','cag-stat-project-settle','cag-stat-contour','cag-stat-check',
         ]) } },
@@ -87,7 +87,7 @@ const cagTabs = [{
 const specializedMode = computed(() => placementMode.value || cagMode.value)
 const ribbonTabs = computed(() => placementMode.value ? placementTabs : cagMode.value ? cagTabs : ribbon.value.tabs)
 const readOnly = computed(() => ribbon.value.readOnly)
-const treeData = computed(() => buildTreeForRole(user.value.id))
+const treeData = computed(() => buildTreeForRole(currentProjectRoleId.value))
 
 const activeTab = ref(placementMode.value ? 'placement' : cagMode.value ? 'cag' : ribbon.value.defaultTab)
 const ribbonLayout = ref('classic')
@@ -157,6 +157,11 @@ const onRibbonClick = ({ itemId }) => {
     case 'sec-draw': ensureTab({ id: 'aa', name: "A-A' 工程地质剖面", type: 'section' }); break
     case 'sv-points': ensureTab({ id: 'lp1', name: '放线点总表', type: 'table' }); break
     case 'fd-files': ensureTab({ id: 'fd1', name: '管线探测记录', type: 'table' }); break
+    case 'cag-view':
+      cagActiveCommand.value = 'cag-view-layer'
+      cagActiveView.value = '编辑数据'
+      ElMessage.success('已打开：编辑数据')
+      break
     default:
       if (cagCommandLabels[itemId]) {
         cagActiveCommand.value = itemId
@@ -212,7 +217,7 @@ const onBack = () => backToCockpit()
       <el-button :icon="ArrowLeft" text @click="onBack">返回驾驶舱</el-button>
       <div class="ws-proj">
         <span class="ws-name">{{ currentProject.name }}</span>
-        <span class="ws-stage">{{ user.title }} · 专业工作区</span>
+        <span class="ws-stage">{{ currentProjectRole.title }} · 专业工作区</span>
       </div>
       <div v-if="readOnly" class="ws-ro"><el-icon><Lock /></el-icon> 只读模式</div>
     </div>
@@ -278,7 +283,12 @@ const onBack = () => backToCockpit()
                   @borehole-finish="onBoreholeFinish"
                   @status="onCadStatus"
                 />
-                <IbgiPane v-else-if="t.type === 'ibgi'" :project-name="currentProject.name" />
+                <IbgiPane
+                  v-else-if="t.type === 'ibgi'"
+                  :project-name="currentProject.name"
+                  :user-name="user.name"
+                  :role-title="currentProjectRole.title"
+                />
                 <div v-else class="view-pad">
                   <div class="view-card" style="text-align:center;color:var(--text-dim);padding:60px;">{{ t.title }} —— 该视图待开发</div>
                 </div>

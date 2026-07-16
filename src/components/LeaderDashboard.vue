@@ -66,6 +66,28 @@ const regionStats = computed(() => {
 
 const recentProjects = computed(() => [...props.projects].sort((a, b) => b.progress - a.progress).slice(0, 5))
 
+const noticeSeeds = [
+  { projectId: 'p4', date: '2026-07-10', color: '#f59e0b', text: '水库项目勘察纲要待审批' },
+  { projectId: 'p1', date: '2026-07-08', color: '#10b981', text: '山区复杂地质模型完成阶段更新' },
+  { projectId: 'p10', date: '2026-07-05', color: '#c8322f', text: '滨海新区项目进入成果交付' },
+  { projectId: null, date: '2026-07-01', color: '#4a9eff', text: '月度质量安全检查通知' },
+]
+const notices = computed(() => {
+  const projectIds = new Set(props.projects.map((project) => project.id))
+  return noticeSeeds.filter((notice) => !notice.projectId || projectIds.has(notice.projectId))
+})
+
+const warningSeeds = [
+  { projectId: 'p4', level: 'high', tag: '高', text: '水库坝基纲要待审批' },
+  { projectId: 'p7', level: 'high', tag: '高', text: '新城综合体纲要策划滞后' },
+  { projectId: 'p8', level: 'mid', tag: '中', text: '高速项目现场辨识延期' },
+  { projectId: 'p11', level: 'low', tag: '低', text: '引水隧洞纲要进度待关注' },
+]
+const warnings = computed(() => {
+  const projectIds = new Set(props.projects.map((project) => project.id))
+  return warningSeeds.filter((warning) => projectIds.has(warning.projectId))
+})
+
 const mapPoints = computed(() => props.projects.map((p, i) => ({
   ...p,
   x: 60 + (i % 4) * 130 + Math.random() * 40,
@@ -98,10 +120,10 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
         <div class="panel">
           <div class="panel-head"><el-icon><Tickets /></el-icon><span>项目公告</span></div>
           <div class="notice-list">
-            <div class="notice-item"><span class="n-date">2026-07-10</span><span class="n-dot" style="background:#f59e0b" />水库项目勘察纲要待审批</div>
-            <div class="notice-item"><span class="n-date">2026-07-08</span><span class="n-dot" style="background:#10b981" />地铁17号线勘探进度过半</div>
-            <div class="notice-item"><span class="n-date">2026-07-05</span><span class="n-dot" style="background:#c8322f" />CBD项目报告进入审定</div>
-            <div class="notice-item"><span class="n-date">2026-07-01</span><span class="n-dot" style="background:#4a9eff" />月度质量安全检查通知</div>
+            <div v-for="notice in notices" :key="notice.date + notice.text" class="notice-item">
+              <span class="n-date">{{ notice.date }}</span>
+              <span class="n-dot" :style="{ background: notice.color }" />{{ notice.text }}
+            </div>
           </div>
         </div>
 
@@ -184,10 +206,10 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
         <div class="panel">
           <div class="panel-head"><el-icon><Warning /></el-icon><span>项目卡点 / 预警</span></div>
           <div class="warning-list">
-            <div class="warning-item high"><span class="w-tag">高</span>CBD项目报告审定滞后</div>
-            <div class="warning-item high"><span class="w-tag">高</span>水库坝基纲要待审批</div>
-            <div class="warning-item mid"><span class="w-tag">中</span>地铁17号线 ZK-03 进度滞后</div>
-            <div class="warning-item low"><span class="w-tag">低</span>高速项目现场辨识延期</div>
+            <div v-for="warning in warnings" :key="warning.projectId" class="warning-item" :class="warning.level">
+              <span class="w-tag">{{ warning.tag }}</span>{{ warning.text }}
+            </div>
+            <div v-if="warnings.length === 0" class="panel-empty">暂无预警</div>
           </div>
         </div>
 
@@ -251,7 +273,7 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 .kpi-sub { color: rgba(255,255,255,0.35); font-size: 11px; margin-top: 2px; }
 
 /* 三栏 */
-.board-grid { flex: 1; display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; min-height: 0; }
+.board-grid { flex: 1 0 560px; display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; min-height: 560px; }
 .board-col { display: flex; flex-direction: column; gap: 14px; }
 .board-center { min-height: 0; }
 
@@ -315,6 +337,7 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 .warning-item.high .w-tag { background: #c8322f; }
 .warning-item.mid .w-tag { background: #f59e0b; }
 .warning-item.low .w-tag { background: #4a9eff; }
+.panel-empty { color: rgba(255,255,255,0.35); font-size: 12px; padding: 4px 0; }
 
 /* 趋势图 */
 .trend-chart { height: 90px; display: flex; flex-direction: column; }

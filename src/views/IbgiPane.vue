@@ -11,6 +11,8 @@ import { Refresh, Link, Lock, Open } from '@element-plus/icons-vue'
 const props = defineProps({
   projectName: { type: String, default: '' },
   url: { type: String, default: '' }, // 外部传入的 i北勘 页面地址
+  userName: { type: String, default: '' },
+  roleTitle: { type: String, default: '' },
 })
 
 const IBGI_HOME = 'https://www.ibgi.cn/#/project/projHome'
@@ -69,7 +71,7 @@ const onFrameLoad = () => { loading.value = false }
       <div class="sc-topbar">
         <span class="sc-logo">i北勘</span>
         <span class="sc-proj">{{ projectName || '勘察工程' }}</span>
-        <span class="sc-user">张明 · 项目负责人</span>
+        <span class="sc-user">{{ userName || '演示用户' }} · {{ roleTitle || '项目成员' }}</span>
       </div>
       <div class="sc-body">
         <div class="sc-left">

@@ -3,7 +3,7 @@
  * view: login | dashboard | cockpit | workspace
  */
 import { reactive, computed } from 'vue'
-import { personas, projects, flowStages, stageStatus } from '../data/mockData'
+import { personas, roleDefinitions, projects, flowStages, stageStatus } from '../data/mockData'
 
 const state = reactive({
   view: 'login',
@@ -19,6 +19,20 @@ const user = computed(() => personas[state.userId] || personas.leader)
 const currentProject = computed(() => projects.find((p) => p.id === state.currentProjectId) || projects[0])
 const currentStage = computed(() => flowStages.find((s) => s.id === state.currentStageId) || flowStages[0])
 
+function roleIdForProject(projectOrId) {
+  const project = typeof projectOrId === 'string'
+    ? projects.find((p) => p.id === projectOrId)
+    : projectOrId
+  return project?.userRoles?.[state.userId] || user.value.defaultRole || state.userId
+}
+
+function roleForProject(projectOrId) {
+  return roleDefinitions[roleIdForProject(projectOrId)] || roleDefinitions.engineer
+}
+
+const currentProjectRole = computed(() => roleForProject(currentProject.value))
+const currentProjectRoleId = computed(() => currentProjectRole.value.id)
+
 /** 项目入口权限：管理角色看全部，专业角色按项目当前阶段进入。 */
 const projectStageAccess = {
   reviewer: ['s8'],
@@ -27,11 +41,16 @@ const projectStageAccess = {
   pipeline: ['s5'],
 }
 const myProjects = computed(() => {
-  if (['leader', 'engineer'].includes(state.userId)) return projects
-  const allowedStages = projectStageAccess[state.userId]
-  if (allowedStages) return projects.filter((p) => allowedStages.includes(p.stageId))
-  return projects.filter((p) => p.roles.includes(state.userId))
+  return projects.filter((p) => {
+    const roleId = roleIdForProject(p)
+    if (['leader', 'engineer'].includes(roleId)) return true
+    const allowedStages = projectStageAccess[roleId]
+    if (allowedStages) return allowedStages.includes(p.stageId)
+    return p.roles.includes(roleId)
+  })
 })
+const hasLeaderProjects = computed(() => myProjects.value.some((p) => roleIdForProject(p) === 'leader'))
+const hasNonLeaderProjects = computed(() => myProjects.value.some((p) => roleIdForProject(p) !== 'leader'))
 
 /** 阶段状态（按当前项目）—— 根据项目当前 stageId 推导：之前 done，当前 doing，之后 todo */
 const currentProjectStageStatus = computed(() => {
@@ -64,9 +83,9 @@ function openProject(id) {
   state.currentProjectId = id
   const p = projects.find((x) => x.id === id)
   if (p) state.currentStageId = p.stageId
-  const u = personas[state.userId]
   // 项目负责人默认进驾驶舱；其余角色进入项目当前所在阶段。
-  state.cockpitTab = u?.id === 'leader' ? 'overview' : (p?.stageId || u?.focusStage || 's2')
+  const role = roleForProject(p)
+  state.cockpitTab = role.id === 'leader' ? 'overview' : (p?.stageId || role.focusStage || 's2')
   state.stageFunc = null
   state.workspaceTarget = null
   state.view = 'cockpit'
@@ -107,10 +126,16 @@ export function useAppStore() {
     state,
     user,
     currentProject,
+    currentProjectRole,
+    currentProjectRoleId,
     currentStage,
     myProjects,
+    hasLeaderProjects,
+    hasNonLeaderProjects,
     stageStatusOf,
     currentProjectStageStatus,
+    roleIdForProject,
+    roleForProject,
     login,
     logout,
     openProject,

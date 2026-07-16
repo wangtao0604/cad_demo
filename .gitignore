@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local project memory (WorkBuddy)
+.workbuddy/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
