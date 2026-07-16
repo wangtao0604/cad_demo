@@ -77,7 +77,7 @@ const deleteManualViewEntityStateIfEmpty = (view, state) => {
   }
 }
 
-const addManualViewEntity = (view, entity) => {
+export const addManualViewEntity = (view, entity) => {
   if (hasEntityObjectId(entity)) {
     const state = getManualViewEntityState(view)
     state.pending.add(entity.objectId)
@@ -117,7 +117,7 @@ const styleEntity = (entity, layerName, rgb) => {
 }
 
 /** 根据图纸范围自适应钻孔符号尺寸 */
-const getBoreholeSymbolMetrics = (db) => {
+export const getBoreholeSymbolMetrics = (db) => {
   const extmin = db.extmin
   const extmax = db.extmax
   const width = Math.abs((extmax?.x || 0) - (extmin?.x || 0))
@@ -177,7 +177,7 @@ const getAvailableBoreholeBlockName = (db, code) => {
 }
 
 /** 把钻孔符号封装成块定义 + 块参照，便于整体移动/删除 */
-const createBoreholeBlockReference = (db, point, code, depth, metrics) => {
+export const createBoreholeBlockReference = (db, point, code, depth, metrics) => {
   const blockName = getAvailableBoreholeBlockName(db, code)
   const blockRecord = new AcDbBlockTableRecord({
     name: blockName,

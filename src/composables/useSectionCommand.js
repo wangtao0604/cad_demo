@@ -7,16 +7,18 @@ import {
 } from '@mlightcad/cad-simple-viewer'
 import {
   AcCmColor,
-  AcDbBlockReference,
-  AcDbBlockTableRecord,
-  AcDbCircle,
   AcDbLayerTableRecord,
   AcDbLine,
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode,
+  AcGeBox2d,
   AcGePoint3d,
 } from '@mlightcad/data-model'
+import {
+  addManualViewEntity,
+  createBoreholeBlockReference,
+} from './useBoreholeCommand'
 
 export const SECTION_LINE_COMMAND_NAME = 'GEO_SECTION_LINE'
 const TEST_HOLE_LAYER = 'GEO_TEST_HOLE'
@@ -47,7 +49,7 @@ const appendAndDisplay = (context, entities) => {
   const modelSpace = context.doc.database.tables.blockTable.modelSpace
   entities.forEach((entity) => {
     modelSpace.appendEntity(entity)
-    context.view.addEntity(entity)
+    addManualViewEntity(context.view, entity)
   })
 }
 
@@ -63,12 +65,33 @@ const makeText = (text, point, height) => {
 }
 
 export const SECTION_TEST_HOLES = [
-  { code: 'ZK1', x: 330, y: 190, elevation: 42.6, depth: 20 },
-  { code: 'ZK2', x: 365, y: 80, elevation: 41.2, depth: 20 },
-  { code: 'ZK3', x: 610, y: 175, elevation: 40.1, depth: 20 },
-  { code: 'ZK4', x: 430, y: 405, elevation: 43.8, depth: 20 },
-  { code: 'ZK5', x: 120, y: 365, elevation: 39.7, depth: 20 },
+  { code: 'ZK1', x: 20, y: 25, elevation: 42.6, depth: 20 },
+  { code: 'ZK2', x: 40, y: 75, elevation: 41.2, depth: 20 },
+  { code: 'ZK3', x: 70, y: 25, elevation: 40.1, depth: 20 },
+  { code: 'ZK4', x: 80, y: 75, elevation: 43.8, depth: 20 },
 ]
+
+const randomizeTestHolePositions = () => {
+  const bounds = { minX: 10, maxX: 90, minY: 10, maxY: 90 }
+  const spanX = bounds.maxX - bounds.minX
+  const spanY = bounds.maxY - bounds.minY
+  const minimumDistance = 22
+  const positions = []
+
+  SECTION_TEST_HOLES.forEach((hole) => {
+    let candidate
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      candidate = {
+        x: bounds.minX + Math.random() * spanX,
+        y: bounds.minY + Math.random() * spanY,
+      }
+      if (positions.every((point) => Math.hypot(point.x - candidate.x, point.y - candidate.y) >= minimumDistance)) break
+    }
+    positions.push(candidate)
+    hole.x = candidate.x
+    hole.y = candidate.y
+  })
+}
 
 const distanceToSegment = (point, start, end) => {
   const dx = end.x - start.x
@@ -107,32 +130,42 @@ const holesAlongSection = (points) => {
     .map(({ distance, order, ...hole }) => hole)
 }
 
-export const addSectionTestHoles = () => {
+export const addSectionTestHoles = ({ force = false } = {}) => {
   const manager = AcApDocManager.instance
   const context = manager.context
-  if (!context?.doc?.database || context.doc.__sectionTestHolesAdded) return
-  ensureLayer(context, TEST_HOLE_LAYER, 0x66d9ef)
-  const radius = 13
+  if (!context?.doc?.database || (!force && context.doc.__sectionTestHolesAdded)) return false
+  if (force) context.doc.__sectionTestHolesAdded = false
+  ensureLayer(context, 'GEO_BOREHOLE', 0xf7d154)
+  ensureLayer(context, 'GEO_BOREHOLE_TEXT', 0x66d9ef)
+  const db = context.doc.database
+  randomizeTestHolePositions()
+  const metrics = {
+    radius: 2.5,
+    textHeight: 2.9,
+    textOffsetX: 4.2,
+    labelOffsetY: 1.1,
+    depthOffsetY: -2.6,
+  }
   SECTION_TEST_HOLES.forEach((hole) => {
-    const blockName = `GEO_SECTION_${hole.code}`
-    let blockRecord = context.doc.database.tables.blockTable.getAt(blockName)
-    if (!blockRecord) {
-      blockRecord = new AcDbBlockTableRecord({ name: blockName, origin: new AcGePoint3d(0, 0, 0) })
-      context.doc.database.tables.blockTable.add(blockRecord)
-      blockRecord.appendEntity([
-        style(new AcDbCircle(new AcGePoint3d(0, 0, 0), radius), TEST_HOLE_LAYER, 0xf7d154),
-        style(new AcDbLine(new AcGePoint3d(-radius, 0, 0), new AcGePoint3d(radius, 0, 0)), TEST_HOLE_LAYER, 0xf7d154),
-        style(new AcDbLine(new AcGePoint3d(0, -radius, 0), new AcGePoint3d(0, radius, 0)), TEST_HOLE_LAYER, 0xf7d154),
-        makeText(hole.code, new AcGePoint3d(radius + 10, 7, 0), 11),
-        makeText(`${hole.depth}m`, new AcGePoint3d(radius + 10, -8, 0), 9),
-      ])
-    }
-    const blockReference = style(new AcDbBlockReference(blockName), TEST_HOLE_LAYER, 0xf7d154)
-    blockReference.position = new AcGePoint3d(hole.x, hole.y, 0)
+    const blockReference = createBoreholeBlockReference(
+      db,
+      new AcGePoint3d(hole.x, hole.y, 0),
+      hole.code,
+      hole.depth,
+      metrics,
+    )
     appendAndDisplay(context, [blockReference])
   })
   context.doc.__sectionTestHolesAdded = true
-  window.setTimeout(() => context.view.zoomToFitDrawing(), 120)
+  const xValues = SECTION_TEST_HOLES.map((hole) => hole.x)
+  const yValues = SECTION_TEST_HOLES.map((hole) => hole.y)
+  const padding = 10
+  const holeBounds = new AcGeBox2d(
+    { x: Math.min(...xValues) - padding, y: Math.min(...yValues) - padding },
+    { x: Math.max(...xValues) + padding, y: Math.max(...yValues) + padding },
+  )
+  window.setTimeout(() => context.view.zoomTo(holeBounds, 1.15), 500)
+  return true
 }
 
 class DrawSectionLineCommand extends AcEdCommand {
@@ -178,7 +211,6 @@ export const configureSectionViewer = (onFinish) => {
       new DrawSectionLineCommand(), ['SECLINE'],
     )
   }
-  window.setTimeout(addSectionTestHoles, 350)
 }
 
 export const startSectionLine = () => {

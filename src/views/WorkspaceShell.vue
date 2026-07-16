@@ -86,6 +86,7 @@ const sectionActionGroup = {
   id: 'g-section-actions', title: '剖面编辑', orientation: 'row', collections: [{
     id: 'c-section-actions', items: [
       { id:'open-plan', type:'button', label:'打开平面图', size:'large', icon:FolderOpened },
+      { id:'section-load-holes', type:'button', label:'加载钻孔', size:'large', icon:Aim },
       { id:'section-line', type:'button', label:'交互生成剖线', size:'large', icon:Connection },
       { id:'section-result', type:'button', label:'生成剖面', size:'large', icon:Share },
     ],
@@ -149,6 +150,7 @@ const boreholeOptions = ref({ prefix: 'ZK', startNo: 1, depth: 20 })
 const boreholeTrigger = ref(0)
 const sectionLineTrigger = ref(0)
 const sectionGenerateTrigger = ref(0)
+const sectionHoleLoadTrigger = ref(0)
 const planFileInput = ref(null)
 const planFile = ref()
 const onBoreholeFinish = (nextNo) => { if (Number.isFinite(nextNo) && nextNo > 0) boreholeOptions.value.startNo = nextNo }
@@ -220,6 +222,9 @@ const onRibbonClick = ({ itemId }) => {
       break
     case 'section-line':
       sectionLineTrigger.value += 1
+      break
+    case 'section-load-holes':
+      sectionHoleLoadTrigger.value += 1
       break
     case 'section-result':
       sectionGenerateTrigger.value += 1
@@ -333,6 +338,7 @@ const onBack = () => backToCockpit()
           :options="boreholeOptions"
           :trigger="sectionLineTrigger"
           :generate-trigger="sectionGenerateTrigger"
+          :load-holes-trigger="sectionHoleLoadTrigger"
           :local-file="planFile"
           tool-mode="section"
           @section-finish="({ generated, message }) => generated ? ElMessage.success('CAD 剖面已生成') : message && ElMessage.warning(message)"

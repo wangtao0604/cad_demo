@@ -30,6 +30,7 @@ const props = defineProps({
   localFile: { type: File, default: undefined },
   toolMode: { type: String, default: 'borehole' },
   generateTrigger: { type: Number, default: 0 },
+  loadHolesTrigger: { type: Number, default: 0 },
 })
 
 // 关闭 CAD Viewer 自带的顶部工具栏/主菜单/命令行，只保留画布，
@@ -77,8 +78,8 @@ const placing = ref(false)
 const viewerReady = ref(false)
 const errorMsg = ref('')
 const pendingTrigger = ref(0)
+const pendingHoleLoad = ref(false)
 const openingFileName = ref('')
-
 const prepareCadFonts = async () => {
   const fontMapping = { ...(AcApSettingManager.instance.fontMapping || {}) }
   try {
@@ -117,6 +118,20 @@ watch(
   },
 )
 
+watch(
+  () => props.loadHolesTrigger,
+  (value) => {
+    if (!value || props.toolMode !== 'section') return
+    if (!viewerReady.value) {
+      pendingHoleLoad.value = true
+      emit('status', 'CAD 视口加载中，钻孔将在就绪后显示')
+      return
+    }
+    const loaded = addSectionTestHoles({ force: true })
+    emit('status', loaded ? '已加载默认钻孔块' : '默认钻孔块已加载')
+  },
+)
+
 const runInteractiveCommand = () => {
   placing.value = true
   if (props.toolMode === 'section') {
@@ -146,6 +161,10 @@ const onViewerCreate = () => {
     )
   }
   viewerReady.value = true
+  if (props.toolMode === 'section' && pendingHoleLoad.value) {
+    pendingHoleLoad.value = false
+    window.setTimeout(() => addSectionTestHoles({ force: true }), 100)
+  }
   emit('created')
   // viewer 就绪后补发缓存的触发
   if (pendingTrigger.value > 0) {
@@ -179,7 +198,6 @@ const onOpenFileProgress = (progress) => {
     openingFileName.value = ''
     emit('status', `已打开 · ${fileName}`)
     emit('file-loaded', fileName)
-    if (props.toolMode === 'section') window.setTimeout(addSectionTestHoles, 100)
     return
   }
   const percentage = Math.round(Number(progress?.percentage) || 0)
