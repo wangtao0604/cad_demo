@@ -136,10 +136,40 @@ const onTabRemove = (name) => {
 const boreholeDialogVisible = ref(false)
 const boreholeOptions = ref({ prefix: 'ZK', startNo: 1, depth: 20 })
 const boreholeTrigger = ref(0)
+const planFileInput = ref(null)
+const planFile = ref()
 const onBoreholeFinish = (nextNo) => { if (Number.isFinite(nextNo) && nextNo > 0) boreholeOptions.value.startNo = nextNo }
 const confirmBorehole = () => { boreholeDialogVisible.value = false; boreholeTrigger.value += 1 }
 const cagActiveView = ref('专业系统')
 const cagActiveCommand = ref('')
+
+const selectPlanFile = () => {
+  ensureCadTab()
+  planFileInput.value?.click()
+}
+
+const onPlanFileSelect = (event) => {
+  const input = event.target
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!file.name.toLowerCase().endsWith('.dwg')) {
+    ElMessage.error('请选择 DWG 格式的平面图')
+    return
+  }
+  if (file.size === 0) {
+    ElMessage.error('无法打开空的 DWG 文件')
+    return
+  }
+  planFile.value = file
+  const cadTab = ensureCadTab()
+  cadTab.title = file.name
+  statusBarStatus.value = `正在打开 ${file.name}…`
+}
+
+const onPlanLoaded = (fileName) => {
+  ElMessage.success(`已打开平面图：${fileName}`)
+}
 
 // Ribbon 分发
 const onRibbonClick = ({ itemId }) => {
@@ -148,7 +178,7 @@ const onRibbonClick = ({ itemId }) => {
     return
   }
   switch (itemId) {
-    case 'open-plan': ensureCadTab(); ElMessage.success('已打开平面图'); break
+    case 'open-plan': selectPlanFile(); break
     case 'borehole-place': ensureCadTab(); boreholeDialogVisible.value = true; break
     case 'save-upload': ensureCadTab(); ElMessage.success('平面布孔成果已保存并上传'); break
     case 'open-cad': ensureCadTab(); break
@@ -212,6 +242,13 @@ const onBack = () => backToCockpit()
 
 <template>
   <div class="app-frame" :class="{ embedded: props.embedded }">
+    <input
+      ref="planFileInput"
+      class="local-file-input"
+      type="file"
+      accept=".dwg,application/acad,application/x-acad,application/autocad_dwg,image/vnd.dwg"
+      @change="onPlanFileSelect"
+    />
     <!-- 顶部返回条（内联模式下隐藏，驾驶舱顶栏已有项目信息与返回） -->
     <div v-if="!props.embedded" class="ws-topbar">
       <el-button :icon="ArrowLeft" text @click="onBack">返回驾驶舱</el-button>
@@ -279,8 +316,10 @@ const onBack = () => backToCockpit()
                   v-else-if="t.type === 'cad'"
                   :options="boreholeOptions"
                   :trigger="boreholeTrigger"
+                  :local-file="planFile"
                   :read-only="readOnly"
                   @borehole-finish="onBoreholeFinish"
+                  @file-loaded="onPlanLoaded"
                   @status="onCadStatus"
                 />
                 <IbgiPane
@@ -317,6 +356,7 @@ const onBack = () => backToCockpit()
 
 <style scoped>
 .app-frame.embedded { width: 100%; height: 100%; }
+.local-file-input { display: none; }
 .ws-topbar {
   height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
   padding: 0 16px; background: var(--app-bg-2); border-bottom: 1px solid var(--border);

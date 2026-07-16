@@ -33,7 +33,9 @@ import {
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode,
+  AcDbOsnapMode,
   AcGePoint3d,
+  acdbOsnapModesToMask,
 } from '@mlightcad/data-model'
 
 // ===== 常量 =====
@@ -211,7 +213,7 @@ class PlaceBoreholeCommand extends AcEdCommand {
       while (true) {
         const prompt = new AcEdPromptPointOptions('指定钻孔插入点 <取消>:')
         prompt.allowNone = true
-        prompt.disableOSnap = true
+        prompt.disableOSnap = false
         const result = await AcApDocManager.instance.editor.getPoint(prompt)
 
         if (result.status !== AcEdPromptStatus.OK || !result.value) break
@@ -248,8 +250,14 @@ const registerBoreholeCommand = (getOptions, onFinish) => {
 }
 
 // ===== CAD 稳定性补丁（来自 backup，幂等）=====
-const disableOsnap = () => {
-  AcApSettingManager.instance.osnapModes = 0
+const enableDefaultOsnap = () => {
+  AcApSettingManager.instance.osnapModes = acdbOsnapModesToMask([
+    AcDbOsnapMode.EndPoint,
+    AcDbOsnapMode.MidPoint,
+    AcDbOsnapMode.Center,
+    AcDbOsnapMode.Quadrant,
+    AcDbOsnapMode.Nearest,
+  ])
 }
 
 const isOsnapModelSpaceWriteError = (err) => (
@@ -444,7 +452,7 @@ patchManualViewEntityGuards()
 export function configureBoreholeViewer(getOptions, onFinish) {
   try {
     AcApSettingManager.instance.isShowCommandLine = true
-    disableOsnap()
+    enableDefaultOsnap()
     patchManualViewEntityGuards()
     ensureWritableDefaults()
     attachDocManagerDefaultGuards()

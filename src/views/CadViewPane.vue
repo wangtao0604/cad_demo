@@ -8,7 +8,10 @@
  */
 import { ref, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue'
 import { MlCadViewer } from '@mlightcad/cad-viewer'
-import { AcEdOpenMode, AcApDocManager, AcApSettingManager, eventBus } from '@mlightcad/cad-simple-viewer'
+import {
+  AcEdOpenMode, AcApDocManager, AcApSettingManager, eventBus,
+  isOpenFileProgressComplete,
+} from '@mlightcad/cad-simple-viewer'
 import {
   configureBoreholeViewer,
   startBoreholePlacement,
@@ -18,6 +21,7 @@ import {
 const props = defineProps({
   options: { type: Object, required: true }, // { prefix, startNo, depth }
   trigger: { type: Number, default: 0 },
+  localFile: { type: File, default: undefined },
 })
 
 // 关闭 CAD Viewer 自带的顶部工具栏/主菜单/命令行，只保留画布，
@@ -55,7 +59,7 @@ if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
   AcApDocManager.prototype.__cadDemoWorkerPatched = true
 }
 
-const emit = defineEmits(['borehole-finish', 'status', 'created'])
+const emit = defineEmits(['borehole-finish', 'status', 'created', 'file-loaded'])
 
 const locale = ref('zh')
 const cadBaseUrl = absUrl('cad-data/')
@@ -64,6 +68,17 @@ const placing = ref(false)
 const viewerReady = ref(false)
 const errorMsg = ref('')
 const pendingTrigger = ref(0)
+const openingFileName = ref('')
+
+watch(
+  () => props.localFile,
+  (file) => {
+    if (!file) return
+    openingFileName.value = file.name
+    errorMsg.value = ''
+    emit('status', `正在打开 ${file.name}…`)
+  },
+)
 
 const runBorehole = () => {
   placing.value = true
@@ -112,11 +127,35 @@ const onViewerMessage = ({ message, type }) => {
   if (type === 'error') errorMsg.value = message || ''
 }
 
+const onOpenFileProgress = (progress) => {
+  if (!openingFileName.value) return
+  if (isOpenFileProgressComplete(progress)) {
+    const fileName = openingFileName.value
+    openingFileName.value = ''
+    emit('status', `已打开 · ${fileName}`)
+    emit('file-loaded', fileName)
+    return
+  }
+  const percentage = Math.round(Number(progress?.percentage) || 0)
+  emit('status', `正在打开 ${openingFileName.value} · ${percentage}%`)
+}
+
+const onOpenFileFailed = ({ fileName }) => {
+  if (!openingFileName.value) return
+  openingFileName.value = ''
+  errorMsg.value = `无法打开 DWG 文件：${fileName}`
+  emit('status', '打开平面图失败')
+}
+
 onMounted(() => {
   eventBus.on('message', onViewerMessage)
+  eventBus.on('open-file-progress', onOpenFileProgress)
+  eventBus.on('failed-to-open-file', onOpenFileFailed)
 })
 onUnmounted(() => {
   eventBus.off('message', onViewerMessage)
+  eventBus.off('open-file-progress', onOpenFileProgress)
+  eventBus.off('failed-to-open-file', onOpenFileFailed)
 })
 
 onErrorCaptured((err) => {
@@ -138,6 +177,7 @@ onErrorCaptured((err) => {
       theme="dark"
       :base-url="cadBaseUrl"
       :url="drawingUrl"
+      :local-file="localFile"
       @create="onViewerCreate"
     />
     <div
