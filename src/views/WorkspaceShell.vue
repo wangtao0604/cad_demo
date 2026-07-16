@@ -18,6 +18,7 @@ import SectionPane from './SectionPane.vue'
 import CadViewPane from './CadViewPane.vue'
 import IbgiPane from './IbgiPane.vue'
 import CagDataView from './CagDataView.vue'
+import CagCommandPanel from './CagCommandPanel.vue'
 import { buildRibbonForRole, fileMenuItems } from '../data/ribbonConfig'
 import { buildTreeForRole } from '../data/treeData'
 import { useAppStore } from '../store/useAppStore'
@@ -60,7 +61,6 @@ const cagCommandLabels = {
   'cag-calc-site':'场地判别', 'cag-calc-liquefaction':'地震液化', 'cag-calc-modulus':'砂卵石模量',
   'cag-calc-map-sheet':'图幅号计算', 'cag-calc-bearing':'承载力计算', 'cag-calc-corrosion':'腐蚀性判断',
 }
-const dropdownOptions = (ids) => ids.map((value) => ({ value, label: cagCommandLabels[value] }))
 const cagTabs = [{
   id: 'cag',
   title: '专业系统',
@@ -74,12 +74,8 @@ const cagTabs = [{
         { id:'cag-manual-layer', type:'button', label:'手动分层', size:'large', icon:EditPen },
         { id:'cag-section-settings', type:'button', label:'剖面设置', size:'large', icon:Share },
         { id:'cag-view', type:'button', label:'编辑数据', size:'large', icon:Edit },
-        { id:'cag-stat', type:'dropdown', label:'统计', size:'large', icon:DataAnalysis, props:{ syncLabelWithSelection:false, options:dropdownOptions([
-          'cag-stat-soil','cag-stat-in-situ','cag-stat-jk','cag-stat-sk','cag-stat-borehole-layer','cag-stat-rebound','cag-stat-high-pressure','cag-stat-rock','cag-stat-dt','cag-stat-single-settle','cag-stat-water-level','cag-stat-layer-elevation','cag-stat-workload','cag-stat-overview','cag-stat-single-workload','cag-stat-record-a3','cag-stat-record-a4','cag-stat-record-hole','cag-stat-field-workload','cag-stat-field-settle','cag-stat-project-settle','cag-stat-contour','cag-stat-check',
-        ]) } },
-        { id:'cag-calc', type:'dropdown', label:'计算', size:'large', icon:Operation, props:{ syncLabelWithSelection:false, options:dropdownOptions([
-          'cag-calc-site','cag-calc-liquefaction','cag-calc-modulus','cag-calc-map-sheet','cag-calc-bearing','cag-calc-corrosion',
-        ]) } },
+        { id:'cag-stat', type:'button', label:'统计', size:'large', icon:DataAnalysis },
+        { id:'cag-calc', type:'button', label:'计算', size:'large', icon:Operation },
       ],
     }],
   }],
@@ -192,6 +188,14 @@ const onRibbonClick = ({ itemId }) => {
       cagActiveView.value = '编辑数据'
       ElMessage.success('已打开：编辑数据')
       break
+    case 'cag-stat':
+      cagActiveCommand.value = 'cag-stat-panel'
+      cagActiveView.value = '统计'
+      break
+    case 'cag-calc':
+      cagActiveCommand.value = 'cag-calc-panel'
+      cagActiveView.value = '计算'
+      break
     default:
       if (cagCommandLabels[itemId]) {
         cagActiveCommand.value = itemId
@@ -285,6 +289,11 @@ const onBack = () => backToCockpit()
         v-if="cagActiveCommand.startsWith('cag-view-')"
         :command="cagActiveCommand"
         @select="(label) => (cagActiveView = label)"
+      />
+      <CagCommandPanel
+        v-else-if="cagActiveCommand === 'cag-stat-panel' || cagActiveCommand === 'cag-calc-panel'"
+        :mode="cagActiveCommand === 'cag-stat-panel' ? 'statistics' : 'calculations'"
+        @select="(command) => onRibbonClick({ itemId: command })"
       />
       <div v-else class="cag-view-body">
         <div class="cag-view-name">{{ cagActiveView }}</div>
