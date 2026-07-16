@@ -30,6 +30,25 @@ AcApSettingManager.instance.isShowLanguageSelector = false
 AcApSettingManager.instance.isShowEntityInfo = false
 AcApSettingManager.instance.isShowStats = false
 
+// —— 修复 GitHub Pages 子路径下 CAD Worker 404 ——
+// MlCadViewer 未暴露 worker URL 的 prop，其内部创建 editor 时调用
+// AcApDocManager.registerWorkers(undefined)，三个 worker 全部走库写死的
+// 默认路径 './assets/...'，在 Pages 子路径下被解析成源站根 '/assets/...' → 404，
+// 导致 "无法打开文件" / CAD 视口空白。这里猴子补丁 registerWorkers，
+// 把 dxf/dwg 解析 worker 与 mtext 渲染 worker 的地址统一加上 BASE_URL 前缀。
+// 用一次性标记避免组件反复挂载时重复包裹。
+if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
+  const _origRegisterWorkers = AcApDocManager.prototype.registerWorkers
+  AcApDocManager.prototype.registerWorkers = function (urls) {
+    return _origRegisterWorkers.call(this, {
+      dxfParser: import.meta.env.BASE_URL + 'assets/dxf-parser-worker.js',
+      dwgParser: import.meta.env.BASE_URL + 'assets/libredwg-parser-worker.js',
+      mtextRender: import.meta.env.BASE_URL + 'assets/mtext-renderer-worker.js',
+    })
+  }
+  AcApDocManager.prototype.__cadDemoWorkerPatched = true
+}
+
 const emit = defineEmits(['borehole-finish', 'status', 'created'])
 
 const locale = ref('zh')
