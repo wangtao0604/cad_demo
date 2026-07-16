@@ -24,6 +24,9 @@ import TodoPanel from '../components/TodoPanel.vue'
 import ResultPanel from '../components/ResultPanel.vue'
 import IbgiPane from './IbgiPane.vue'
 
+// 资源路径拼接：适配 GitHub Pages 子路径 /cad_demo/（import.meta 只能在 script 内使用）
+const assetUrl = (file) => import.meta.env.BASE_URL + file
+
 const {
   state, user, currentProject, currentProjectRole, currentProjectRoleId,
   currentStage, currentProjectStageStatus,
@@ -180,21 +183,21 @@ const activeRibbonTab = computed({
 const stageFuncs = computed(() => stageRibbons[state.currentStageId]?.funcs || [])
 const activeFunc = computed(() => stageFuncs.value.find((f) => f.id === state.stageFunc) || null)
 const ibgiStagePreview = computed(() => ({
-  's2-plan':    { title:'纲要（i北勘）', src:'/ibgi-outline-preview.png' },
-  's3-recon':   { title:'辨识（i北勘）', src:'/ibgi-recognition-preview.png' },
-  's4-survey':  { title:'放线（i北勘）', src:'/ibgi-survey-preview.png' },
-  's5-explore': { title:'勘探（i北勘）', src:'/ibgi-exploration-preview.png' },
-  's7-ibgi':    { title:'内业（i北勘）', src:'/ibgi-full-process-preview.png' },
+  's2-plan':    { title:'纲要（i北勘）', src: import.meta.env.BASE_URL + 'ibgi-outline-preview.png' },
+  's3-recon':   { title:'辨识（i北勘）', src: import.meta.env.BASE_URL + 'ibgi-recognition-preview.png' },
+  's4-survey':  { title:'放线（i北勘）', src: import.meta.env.BASE_URL + 'ibgi-survey-preview.png' },
+  's5-explore': { title:'勘探（i北勘）', src: import.meta.env.BASE_URL + 'ibgi-exploration-preview.png' },
+  's7-ibgi':    { title:'内业（i北勘）', src: import.meta.env.BASE_URL + 'ibgi-full-process-preview.png' },
 })[state.stageFunc] || null)
 const externalProgramPreview = computed(() => ({
   's7-model': {
     title: '三维地质建模',
-    src: '/geology-modeling-preview.png',
+    src: import.meta.env.BASE_URL + 'geology-modeling-preview.png',
     alt: '北勘三维地质建模软件界面预览',
   },
   's8-approval': {
     title: '审批（i北勘）',
-    src: '/ibgi-approval-preview.png',
+    src: import.meta.env.BASE_URL + 'ibgi-approval-preview.png',
     alt: 'i北勘产品交付审批页面预览',
   },
 })[state.stageFunc] || null)
@@ -485,7 +488,7 @@ const stageMetrics = computed(() => [
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
             <div class="ibgi-process-preview">
-              <img src="/ibgi-full-process-preview.png" alt="i北勘全流程页面预览" />
+              <img :src="assetUrl('ibgi-full-process-preview.png')" alt="i北勘全流程页面预览" />
             </div>
           </div>
         </div>
