@@ -37,13 +37,19 @@ AcApSettingManager.instance.isShowStats = false
 // 导致 "无法打开文件" / CAD 视口空白。这里猴子补丁 registerWorkers，
 // 把 dxf/dwg 解析 worker 与 mtext 渲染 worker 的地址统一加上 BASE_URL 前缀。
 // 用一次性标记避免组件反复挂载时重复包裹。
+// 统一把 BASE_URL 下的资源拼成【绝对 URL】。
+// 关键：库内部 getFileNameFromUri 用 new URL(uri) 且不带 base，
+// 相对路径（如 '/cad_demo/...'）会直接抛 "Invalid URL"，必须传绝对地址。
+const absUrl = (path) =>
+  new URL(import.meta.env.BASE_URL + path, window.location.origin).href
+
 if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
   const _origRegisterWorkers = AcApDocManager.prototype.registerWorkers
   AcApDocManager.prototype.registerWorkers = function (urls) {
     return _origRegisterWorkers.call(this, {
-      dxfParser: import.meta.env.BASE_URL + 'assets/dxf-parser-worker.js',
-      dwgParser: import.meta.env.BASE_URL + 'assets/libredwg-parser-worker.js',
-      mtextRender: import.meta.env.BASE_URL + 'assets/mtext-renderer-worker.js',
+      dxfParser: absUrl('assets/dxf-parser-worker.js'),
+      dwgParser: absUrl('assets/libredwg-parser-worker.js'),
+      mtextRender: absUrl('assets/mtext-renderer-worker.js'),
     })
   }
   AcApDocManager.prototype.__cadDemoWorkerPatched = true
@@ -52,8 +58,8 @@ if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
 const emit = defineEmits(['borehole-finish', 'status', 'created'])
 
 const locale = ref('zh')
-const cadBaseUrl = import.meta.env.BASE_URL + 'cad-data/'
-const drawingUrl = import.meta.env.BASE_URL + 'cad-data/templates/acadiso.dxf'
+const cadBaseUrl = absUrl('cad-data/')
+const drawingUrl = absUrl('cad-data/templates/acadiso.dxf')
 const placing = ref(false)
 const viewerReady = ref(false)
 const errorMsg = ref('')
