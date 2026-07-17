@@ -6,27 +6,26 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Key, Right, Connection } from '@element-plus/icons-vue'
-import { personaList, projects, roleDefinitions } from '../data/mockData'
 import { useAppStore } from '../store/useAppStore'
 import ThemeToggle from '../components/ThemeToggle.vue'
 
-const { login } = useAppStore()
+const { personaList, projects, roleDefinitions, login } = useAppStore()
 
 const form = ref({ account: 'admin', password: '123456', captcha: '' })
 const captchaCode = ref('8K3M')
 const selectedRole = ref('leader')
 const loading = ref(false)
 
-const currentPersona = computed(() => personaList.find((p) => p.id === selectedRole.value))
-const roleIdsForPersona = (persona) => [...new Set(projects.map((project) => (
+const currentPersona = computed(() => personaList.find((p) => p.id === selectedRole.value) || personaList[0] || {})
+const roleIdsForPersona = (persona = {}) => [...new Set(projects.map((project) => (
   project.userRoles?.[persona.id] || persona.defaultRole
-)))]
+)).filter(Boolean))]
 const roleTitlesForPersona = (persona) => roleIdsForPersona(persona)
   .map((roleId) => roleDefinitions[roleId]?.title)
   .filter(Boolean)
 const isHighlightedMultiRole = (persona) => roleIdsForPersona(persona).length >= 3
 const currentPersonaDesc = computed(() => {
-  if (!isHighlightedMultiRole(currentPersona.value)) return currentPersona.value.desc
+  if (!isHighlightedMultiRole(currentPersona.value)) return currentPersona.value.desc || ''
   return `跨项目角色：${roleTitlesForPersona(currentPersona.value).join(' / ')}`
 })
 
@@ -35,18 +34,25 @@ const refreshCaptcha = () => {
   captchaCode.value = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-const onLogin = () => {
+const onLogin = async () => {
   if (!form.value.account || !form.value.password) {
     ElMessage.warning('请输入账号和密码')
     return
   }
-  // 验证码暂不校验：留空或任意输入均可登录（界面保留，便于后续接入）
   loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    login(selectedRole.value)
+  try {
+    await login({
+      account: form.value.account,
+      password: form.value.password,
+      captcha: form.value.captcha,
+      personaId: selectedRole.value,
+    })
     ElMessage.success(`欢迎，${currentPersona.value.name}`)
-  }, 600)
+  } catch (error) {
+    ElMessage.error(error.message || '登录失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

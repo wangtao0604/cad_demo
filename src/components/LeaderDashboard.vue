@@ -7,16 +7,17 @@ import { computed } from 'vue'
 import {
   DataBoard, OfficeBuilding, Warning, DocumentChecked, MapLocation, Aim, Tickets, TrendCharts,
 } from '@element-plus/icons-vue'
-import { flowStages, categories } from '../data/mockData'
 
 const props = defineProps({
   projects: { type: Array, default: () => [] },
   user: { type: Object, default: () => ({}) },
+  stages: { type: Array, default: () => [] },
+  categories: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['openProject'])
 
-const stageName = (id) => flowStages.find((s) => s.id === id)?.name || '-'
-const stageShort = (id) => flowStages.find((s) => s.id === id)?.short || '-'
+const stageName = (id) => props.stages.find((s) => s.id === id)?.name || '-'
+const stageShort = (id) => props.stages.find((s) => s.id === id)?.short || '-'
 const stageColor = (id) => {
   const m = { s2: '#4a9eff', s3: '#a855f7', s4: '#06b6d4', s5: '#f59e0b', s7: '#ec4899', s8: '#c8322f' }
   return m[id] || '#6b7280'
@@ -41,14 +42,14 @@ const kpi = computed(() => {
 })
 
 const stageStats = computed(() => {
-  return flowStages.map((s) => ({
+  return props.stages.map((s) => ({
     ...s,
     count: props.projects.filter((p) => p.stageId === s.id).length,
   })).filter((s) => s.count > 0)
 })
 
 const catStats = computed(() => {
-  return categories.slice(1).map((c) => ({
+  return props.categories.slice(1).map((c) => ({
     name: c,
     count: props.projects.filter((p) => p.category === c).length,
     color: catColor(c),
@@ -178,7 +179,7 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
             </svg>
             <div class="map-legend">
               <div class="legend-title">阶段图例</div>
-              <div v-for="s in flowStages" :key="s.id" class="legend-item">
+              <div v-for="s in stages" :key="s.id" class="legend-item">
                 <span class="legend-dot" :style="{ background: stageColor(s.id) }" />{{ s.short }}
               </div>
             </div>

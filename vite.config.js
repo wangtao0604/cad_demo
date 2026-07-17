@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 const commonJsDeps = [
@@ -14,22 +14,33 @@ const commonJsDeps = [
   'dayjs/plugin/isSameOrBefore.js',
 ]
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [vue()],
-  server: {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Opener-Policy': 'same-origin',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const proxyTarget = env.VITE_API_PROXY_TARGET
+
+  return {
+    plugins: [vue()],
+    server: {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+      },
+      fs: {
+        strict: false,
+      },
+      proxy: proxyTarget ? {
+        '/api': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+      } : undefined,
     },
-    fs: {
-      strict: false,
+    optimizeDeps: {
+      include: commonJsDeps,
+      exclude: ['@mlightcad/cad-viewer', '@mlightcad/cad-simple-viewer', '@mlightcad/data-model'],
+      needsInterop: commonJsDeps,
     },
-  },
-  optimizeDeps: {
-    include: commonJsDeps,
-    exclude: ['@mlightcad/cad-viewer', '@mlightcad/cad-simple-viewer', '@mlightcad/data-model'],
-    needsInterop: commonJsDeps,
-  },
+  }
 })
 

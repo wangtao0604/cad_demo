@@ -1,5 +1,7 @@
 <script setup>
-import { boreholeTable, strataColors } from '../data/treeData'
+import { useAppStore } from '../store/useAppStore'
+
+const { boreholes: boreholeTable, strataColors } = useAppStore()
 
 const fmt = (n, d = 2) => Number(n).toFixed(d)
 </script>

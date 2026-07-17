@@ -287,30 +287,6 @@ html[data-theme='light'] .fn-node.todo .fn-icon { background: var(--panel-3); co
 html[data-theme='light'] .fn-node.todo .fn-status { color: var(--text-mute); }
 html[data-theme='light'] .fn-line { background: var(--border-light); }
 
-html[data-theme='light'] .cp-ribbon {
-  --ml-rb-border: var(--border);
-  --ml-rb-border-strong: #b8cff1;
-  --ml-rb-bg: #f7f9fc;
-  --ml-rb-panel-bg: #f7f9fc;
-  --ml-rb-tab-text: #344258;
-  --ml-rb-muted: #7c899b;
-  --ml-rb-active: #2563eb;
-  --ml-rb-header-start: #ffffff;
-  --ml-rb-header-end: #ffffff;
-  --ml-rb-hover-bg: #edf3fb;
-  --ml-rb-hover-border: #b8cff1;
-  --ml-rb-active-bg: #e7f0ff;
-  --ml-rb-active-border: #8fb2e8;
-  --ml-rb-surface: #ffffff;
-  --ml-rb-surface-soft: #f4f7fa;
-}
-html[data-theme='light'] .cp-ribbon .ml-ribbon__panel { background: #f7f9fc; }
-html[data-theme='light'] .cp-ribbon .ml-ribbon-tab { color: var(--text-dim); }
-html[data-theme='light'] .cp-ribbon .ml-ribbon-tab:hover { color: var(--text); }
-html[data-theme='light'] .cp-ribbon .ml-ribbon-tab.is-active { color: var(--accent); }
-html[data-theme='light'] .cp-ribbon .ml-ribbon-item-host .el-button { color: var(--text-dim); }
-html[data-theme='light'] .cp-ribbon .ml-ribbon-group__footer { color: var(--text-mute); }
-
 html[data-theme='light'] .metric-card,
 html[data-theme='light'] .block-card,
 html[data-theme='light'] .stage-current,

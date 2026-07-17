@@ -6,11 +6,11 @@
  */
 import { computed } from 'vue'
 import { Document, Box, Tickets, Share, DataAnalysis, Position, Grid, View, Lock } from '@element-plus/icons-vue'
-import { flowStages } from '../data/mockData'
 
 const props = defineProps({
   results: { type: Array, default: () => [] },
   role: { type: String, default: '' },
+  stages: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['view'])
 
@@ -20,7 +20,7 @@ const visibleResults = computed(() =>
   props.results.filter((r) => !r.roles || r.roles.includes(props.role))
 )
 
-const stageName = (id) => flowStages.find((s) => s.id === id)?.name || '-'
+const stageName = (id) => props.stages.find((s) => s.id === id)?.name || '-'
 
 const typeColor = (t) => ({
   '文档': '#4a9eff', '模型': '#10b981', '图件': '#f59e0b', '报告': '#a855f7', '表格': '#6b7280',

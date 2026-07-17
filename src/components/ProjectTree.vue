@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Search, Folder, Aim, Tickets, DataAnalysis, Share, View, Box, Connection, Link, Fold, Expand } from '@element-plus/icons-vue'
-import { treeData as fullTreeData } from '../data/treeData'
 
 const props = defineProps({
   width: { type: Number, default: 260 },
@@ -17,7 +16,7 @@ const toggleCollapse = () => emit('update:collapsed', !props.collapsed)
 const filterText = ref('')
 const treeRef = ref()
 
-const treeData = computed(() => props.data || fullTreeData)
+const treeData = computed(() => props.data || [])
 
 // 节点类型 → 图标
 const typeIcon = {

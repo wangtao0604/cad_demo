@@ -3,9 +3,14 @@ import { computed, reactive, ref, watch } from 'vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Edit, List, Plus } from '@element-plus/icons-vue'
+import { useAppStore } from '../store/useAppStore'
 
 const props = defineProps({ command: { type: String, default: 'cag-view-borehole' } })
 const emit = defineEmits(['select'])
+const {
+  cagDatasets, cagLoading, loadCagDataset,
+  createCagRow, updateCagRow, deleteCagRows,
+} = useAppStore()
 
 const tabs = [
   { id:'cag-view-layer', label:'综合分层' },
@@ -19,61 +24,51 @@ const tabs = [
   { id:'cag-view-soluble-salt', label:'水的易溶盐' },
 ]
 
-const boreholeCodes = ['ZK-01','ZK-02','ZK-03','ZK-04','ZK-05','ZK-06','ZK-07','ZK-08','ZK-09','ZK-10','ZK-11','ZK-12','ZK-13']
-const makeRows = (mapper) => boreholeCodes.map((code, index) => ({ id:index + 1, code, ...mapper(index, code) }))
-
-const configs = reactive({
+const configs = {
   'cag-view-borehole': {
     columns: [
       ['id','序号',58], ['favorite','收藏',64], ['code','钻孔编号',130], ['type','钻孔类型',210],
       ['elevation','孔口标高(m)',130], ['depth','钻孔深度(m)',130], ['date','勘探钻孔日期',190],
       ['layerAction','地层信息',100], ['waterAction','水位信息',100],
     ],
-    rows: makeRows((i) => ({ favorite:'☆', type:i % 3 ? '一般性探孔' : '取土、标准贯入、重型动力触探', elevation:(34.56 + i * 0.07).toFixed(2), depth:[58,30,40,62,55][i % 5].toFixed(2), date:`2026-07-${String(15 - i).padStart(2,'0')} 14:${String(20 + i).padStart(2,'0')}:00`, layerAction:'查看', waterAction:i % 3 === 2 ? '-' : '查看' })),
   },
   'cag-view-layer': {
     columns: [['id','序号',70],['code','钻孔编号',130],['layer','层号',90],['name','土层名称',180],['bottom','层底标高(m)',140],['thickness','厚度(m)',120],['description','岩土描述',360],['status','状态',100]],
-    rows: makeRows((i) => ({ layer:`${i % 6 + 1}`, name:['素填土','粉质黏土','中砂','圆砾','强风化泥岩','中风化泥岩'][i % 6], bottom:(33.2 - i * 1.35).toFixed(2), thickness:(1.2 + i % 4 * 0.6).toFixed(2), description:'层位连续，岩土特征及分层界线已完成复核', status:i % 4 ? '已确认' : '待复核' })),
   },
   'cag-view-geology': {
     columns: [['id','序号',70],['code','钻孔编号',130],['range','深度范围(m)',160],['name','岩土名称',160],['color','颜色',110],['density','密实度',120],['description','地质描述',520]],
-    rows: makeRows((i) => ({ range:`${(i * 1.5).toFixed(1)}-${(i * 1.5 + 2.4).toFixed(1)}`, name:['粉质黏土','中砂','圆砾','泥岩'][i % 4], color:['黄褐色','灰黄色','杂色','棕红色'][i % 4], density:['稍密','中密','密实'][i % 3], description:'结构较均匀，局部夹薄层，钻进过程稳定，取芯完整。' })),
   },
   'cag-view-water': {
     columns: [['id','序号',70],['code','钻孔编号',150],['initial','初见水位(m)',160],['stable','稳定水位(m)',160],['elevation','水位标高(m)',160],['date','观测日期',200],['note','备注',420]],
-    rows: makeRows((i) => ({ initial:(8.4 + i * 0.3).toFixed(2), stable:(7.9 + i * 0.28).toFixed(2), elevation:(26.4 - i * 0.21).toFixed(2), date:`2026-07-${String(i + 1).padStart(2,'0')}`, note:i % 3 ? '水位稳定' : '雨后复测' })),
   },
   'cag-view-soil': {
     columns: [['id','序号',70],['code','样品编号',150],['test','试验项目',220],['moisture','含水率(%)',150],['density','密度(g/cm³)',150],['voidRatio','孔隙比',130],['status','试验状态',150],['report','报告',100]],
-    rows: makeRows((i, code) => ({ code:`${code}-T${i + 1}`, test:'常规物理力学性质试验', moisture:(18 + i * 0.7).toFixed(1), density:(1.82 + i * 0.01).toFixed(2), voidRatio:(0.62 + i * 0.012).toFixed(3), status:i % 4 ? '已完成' : '复核中', report:'查看' })),
   },
   'cag-view-special-soil': {
     columns: [['id','序号',70],['code','样品编号',150],['test','特殊试验',260],['value','试验值',140],['unit','单位',110],['date','完成日期',180],['status','状态',130],['report','报告',100]],
-    rows: makeRows((i, code) => ({ code:`${code}-S${i + 1}`, test:['高压固结','三轴剪切','渗透试验'][i % 3], value:(12.6 + i * 1.8).toFixed(2), unit:['MPa','kPa','cm/s'][i % 3], date:`2026-07-${String(i + 2).padStart(2,'0')}`, status:'已完成', report:'查看' })),
   },
   'cag-view-demo-test': {
     columns: [['id','序号',70],['code','试验编号',150],['name','试验名称',220],['instrument','试验仪器',240],['operator','试验人员',140],['date','试验时间',190],['status','状态',130],['record','记录',100]],
-    rows: makeRows((i, code) => ({ code:`YS-${String(i + 1).padStart(3,'0')}`, name:['颗粒分析','固结试验','直剪试验'][i % 3], instrument:['粒度分析仪','固结仪','应变控制直剪仪'][i % 3], operator:['王工','李工','赵工'][i % 3], date:`2026-07-${String(i + 1).padStart(2,'0')} 09:30`, status:'已完成', record:'查看' })),
   },
   'cag-view-water-quality': {
     columns: [['id','序号',70],['code','水样编号',150],['ph','pH值',110],['hardness','总硬度(mg/L)',170],['chloride','氯离子(mg/L)',170],['sulfate','硫酸根(mg/L)',170],['date','检测日期',180],['report','报告',100]],
-    rows: makeRows((i, code) => ({ code:`${code}-W`, ph:(7.1 + i * 0.03).toFixed(2), hardness:180 + i * 4, chloride:42 + i * 2, sulfate:68 + i * 3, date:`2026-07-${String(i + 1).padStart(2,'0')}`, report:'查看' })),
   },
   'cag-view-soluble-salt': {
     columns: [['id','序号',70],['code','样品编号',150],['total','易溶盐总量(%)',180],['carbonate','碳酸根(%)',160],['chloride','氯离子(%)',160],['sulfate','硫酸根(%)',160],['status','状态',130],['report','报告',100]],
-    rows: makeRows((i, code) => ({ code:`${code}-Y${i + 1}`, total:(0.12 + i * 0.008).toFixed(3), carbonate:(0.015 + i * 0.001).toFixed(3), chloride:(0.028 + i * 0.002).toFixed(3), sulfate:(0.034 + i * 0.002).toFixed(3), status:'已完成', report:'查看' })),
   },
-})
+}
 
 const activeCommand = ref(configs[props.command] ? props.command : 'cag-view-borehole')
 const page = ref(1)
 const pageSize = ref(10)
 const config = computed(() => configs[activeCommand.value])
-const rows = computed(() => config.value.rows.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
+const allRows = computed(() => cagDatasets[activeCommand.value] || [])
+const rows = computed(() => allRows.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
 const selectedRows = ref([])
 const editorVisible = ref(false)
 const editingRow = ref(null)
 const editorForm = reactive({})
+const saving = ref(false)
 const actionFields = new Set(['favorite', 'layerAction', 'waterAction', 'report', 'record'])
 const editableColumns = computed(() => config.value.columns.filter(([key]) => key !== 'id' && !actionFields.has(key)))
 const editorTitle = computed(() => editingRow.value ? '编辑数据' : '新增数据')
@@ -95,22 +90,28 @@ const openEdit = (row) => {
   editorVisible.value = true
 }
 
-const saveEditor = () => {
+const saveEditor = async () => {
   const requiredKey = editableColumns.value[0]?.[0]
   if (requiredKey && !String(editorForm[requiredKey] ?? '').trim()) {
     ElMessage.warning(`请填写${editableColumns.value[0][1]}`)
     return
   }
-  if (editingRow.value) {
-    Object.assign(editingRow.value, editorForm)
-    ElMessage.success('数据已更新')
-  } else {
-    const maxId = config.value.rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0)
-    config.value.rows.push({ id: maxId + 1, ...editorForm })
-    page.value = Math.ceil(config.value.rows.length / pageSize.value)
-    ElMessage.success('数据已新增')
+  saving.value = true
+  try {
+    if (editingRow.value) {
+      await updateCagRow(activeCommand.value, editingRow.value.id, { ...editorForm })
+      ElMessage.success('数据已更新')
+    } else {
+      await createCagRow(activeCommand.value, { ...editorForm })
+      page.value = Math.ceil(allRows.value.length / pageSize.value)
+      ElMessage.success('数据已新增')
+    }
+    editorVisible.value = false
+  } catch (error) {
+    ElMessage.error(error.message || '数据保存失败')
+  } finally {
+    saving.value = false
   }
-  editorVisible.value = false
 }
 
 const removeRows = async (targets) => {
@@ -120,22 +121,30 @@ const removeRows = async (targets) => {
       type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消',
     })
   } catch { return }
-  const targetSet = new Set(targets)
-  config.value.rows = config.value.rows.filter((row) => !targetSet.has(row))
-  selectedRows.value = []
-  const maxPage = Math.max(1, Math.ceil(config.value.rows.length / pageSize.value))
-  page.value = Math.min(page.value, maxPage)
-  ElMessage.success('数据已删除')
+  try {
+    await deleteCagRows(activeCommand.value, targets.map((row) => row.id))
+    selectedRows.value = []
+    const maxPage = Math.max(1, Math.ceil(allRows.value.length / pageSize.value))
+    page.value = Math.min(page.value, maxPage)
+    ElMessage.success('数据已删除')
+  } catch (error) {
+    ElMessage.error(error.message || '数据删除失败')
+  }
 }
 
 watch(() => props.command, (command) => {
   if (configs[command]) activeCommand.value = command
 })
-watch(activeCommand, (command) => {
+watch(activeCommand, async (command) => {
   page.value = 1
   selectedRows.value = []
   emit('select', tabs.find((tab) => tab.id === command)?.label || '数据查看')
-})
+  try {
+    await loadCagDataset(command)
+  } catch (error) {
+    ElMessage.error(error.message || '数据加载失败')
+  }
+}, { immediate: true })
 watch(pageSize, () => { page.value = 1 })
 </script>
 
@@ -158,6 +167,7 @@ watch(pageSize, () => { page.value = 1 })
 
         <el-table
           :data="rows"
+          v-loading="cagLoading[activeCommand]"
           stripe
           border
           height="calc(100% - 128px)"
@@ -192,7 +202,7 @@ watch(pageSize, () => { page.value = 1 })
             v-model:current-page="page"
             v-model:page-size="pageSize"
             :page-sizes="[10, 20, 50]"
-            :total="config.rows.length"
+            :total="allRows.length"
             layout="total, sizes, prev, pager, next, jumper"
             background
           />
@@ -212,7 +222,7 @@ watch(pageSize, () => { page.value = 1 })
         </el-form>
         <template #footer>
           <el-button @click="editorVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveEditor">保存</el-button>
+          <el-button type="primary" :loading="saving" @click="saveEditor">保存</el-button>
         </template>
       </el-dialog>
     </div>

@@ -3,13 +3,14 @@
  * 项目看板 · 登录身份固定，每张项目卡按项目角色展示和进入
  */
 import { ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Search, DataBoard, Grid, MapLocation, SwitchButton, Aim, Document, TrendCharts, User } from '@element-plus/icons-vue'
 import { useAppStore } from '../store/useAppStore'
-import { flowStages, categories } from '../data/mockData'
 import LeaderDashboard from '../components/LeaderDashboard.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 
 const {
+  state, flowStages, categories,
   user, myProjects, hasLeaderProjects, hasNonLeaderProjects,
   roleForProject, openProject, logout,
 } = useAppStore()
@@ -94,8 +95,13 @@ const catColor = (cat) => {
 
 const progressColor = (v) => (v >= 80 ? '#10b981' : v >= 40 ? '#4a9eff' : '#f59e0b')
 
-const onOpen = (p) => {
-  openProject(p.id)
+const onOpen = async (p) => {
+  if (!p) return
+  try {
+    await openProject(p.id)
+  } catch (error) {
+    ElMessage.error(error.message || '项目加载失败')
+  }
 }
 
 const onLogout = () => {
@@ -104,7 +110,7 @@ const onLogout = () => {
 </script>
 
 <template>
-  <div class="dash-page">
+  <div class="dash-page" v-loading="state.projectLoading">
     <header class="dash-header">
       <div class="dh-left">
         <div class="dh-logo">勘</div>
@@ -163,7 +169,13 @@ const onLogout = () => {
     </div>
 
     <div v-if="viewMode === 'dashboard'" class="dash-cockpit">
-      <LeaderDashboard :projects="leaderProjects" :user="user" @open-project="openProject" />
+      <LeaderDashboard
+        :projects="leaderProjects"
+        :user="user"
+        :stages="flowStages"
+        :categories="categories"
+        @open-project="(id) => onOpen(myProjects.find((project) => project.id === id))"
+      />
     </div>
 
     <div v-else-if="viewMode === 'list'" class="dash-list">

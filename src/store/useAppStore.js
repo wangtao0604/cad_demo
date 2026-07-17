@@ -1,94 +1,242 @@
-/**
- * 全局应用状态（不引入 pinia，用 reactive 轻量实现）
- * view: login | dashboard | cockpit | workspace
- */
-import { reactive, computed } from 'vue'
-import { personas, roleDefinitions, projects, flowStages, stageStatus } from '../data/mockData'
+import { computed, reactive } from 'vue'
+import { platformService } from '../services/platformService'
+import { filterProjectTree } from '../domain/projectTree'
 
 const state = reactive({
   view: 'login',
   userId: 'leader',
-  currentProjectId: 'p1',
-  currentStageId: 's7',
-  cockpitTab: 'overview', // 'overview'(项目负责人驾驶舱/项目管控) | 阶段id 's2'..'s8'
-  stageFunc: null,        // null=阶段工作台默认 | 功能id | 'todo' | 'result' | 'map' | 'files' | 'quality' | 'info'
-  workspaceTarget: null,  // 进入专业工作区时的初始目标: 'placement'|'cag'|'borehole-place'|'cad'|'log'|'section'|null
+  currentProjectId: '',
+  currentStageId: '',
+  cockpitTab: 'overview',
+  stageFunc: null,
+  workspaceTarget: null,
+  booting: true,
+  bootError: '',
+  authenticating: false,
+  authError: '',
+  projectLoading: false,
+  projectError: '',
 })
 
-const user = computed(() => personas[state.userId] || personas.leader)
-const currentProject = computed(() => projects.find((p) => p.id === state.currentProjectId) || projects[0])
-const currentStage = computed(() => flowStages.find((s) => s.id === state.currentStageId) || flowStages[0])
+// Runtime data is kept stable so consumers can safely retain references while REST data is replaced.
+const personas = reactive({})
+const personaList = reactive([])
+const roleDefinitions = reactive({})
+const projects = reactive([])
+const flowStages = reactive([])
+const stageStatus = reactive({})
+const stageAccess = reactive({})
+const stageRibbons = reactive({})
+const categories = reactive([])
+const integrationUrls = reactive({})
+
+const todos = reactive([])
+const results = reactive([])
+const projectTree = reactive([])
+const boreholes = reactive([])
+const strataColors = reactive([])
+const boreholeLogs = reactive({})
+const cagDatasets = reactive({})
+const cagLoading = reactive({})
+
+function replaceArray(target, value) {
+  target.splice(0, target.length, ...(Array.isArray(value) ? value : []))
+}
+
+function replaceObject(target, value) {
+  Object.keys(target).forEach((key) => delete target[key])
+  Object.assign(target, value && typeof value === 'object' ? value : {})
+}
+
+function applyMetadata(metadata = {}) {
+  const people = metadata.personas || {}
+  const peopleList = metadata.personaList || (Array.isArray(people) ? people : Object.values(people))
+  replaceArray(personaList, peopleList)
+  replaceObject(personas, Array.isArray(people) ? Object.fromEntries(people.map((item) => [item.id, item])) : people)
+  replaceObject(roleDefinitions, metadata.roleDefinitions)
+  replaceArray(projects, metadata.projects)
+  replaceArray(flowStages, metadata.flowStages)
+  replaceObject(stageStatus, metadata.stageStatus)
+  replaceObject(stageAccess, metadata.stageAccess)
+  replaceObject(stageRibbons, metadata.stageRibbons)
+  replaceArray(categories, metadata.categories)
+  replaceObject(integrationUrls, metadata.integrationUrls)
+
+  if (!state.currentProjectId && projects[0]) state.currentProjectId = projects[0].id
+  if (!state.currentStageId && flowStages[0]) state.currentStageId = flowStages[0].id
+}
+
+async function initialize() {
+  state.booting = true
+  state.bootError = ''
+  try {
+    applyMetadata(await platformService.getMetadata())
+  } catch (error) {
+    state.bootError = error.message || '平台初始化失败'
+  } finally {
+    state.booting = false
+  }
+}
+
+const user = computed(() => personas[state.userId] || personaList[0] || {})
+const currentProject = computed(() => projects.find((project) => project.id === state.currentProjectId) || projects[0] || {})
+const currentStage = computed(() => flowStages.find((stage) => stage.id === state.currentStageId) || flowStages[0] || {})
 
 function roleIdForProject(projectOrId) {
   const project = typeof projectOrId === 'string'
-    ? projects.find((p) => p.id === projectOrId)
+    ? projects.find((item) => item.id === projectOrId)
     : projectOrId
   return project?.userRoles?.[state.userId] || user.value.defaultRole || state.userId
 }
 
 function roleForProject(projectOrId) {
-  return roleDefinitions[roleIdForProject(projectOrId)] || roleDefinitions.engineer
+  return roleDefinitions[roleIdForProject(projectOrId)] || roleDefinitions.engineer || {}
 }
 
 const currentProjectRole = computed(() => roleForProject(currentProject.value))
-const currentProjectRoleId = computed(() => currentProjectRole.value.id)
+const currentProjectRoleId = computed(() => currentProjectRole.value.id || '')
 
-/** 项目入口权限：管理角色看全部，专业角色按项目当前阶段进入。 */
 const projectStageAccess = {
   reviewer: ['s8'],
   approver: ['s8'],
   surveyor: ['s4'],
   pipeline: ['s5'],
 }
-const myProjects = computed(() => {
-  return projects.filter((p) => {
-    const roleId = roleIdForProject(p)
-    if (['leader', 'engineer'].includes(roleId)) return true
-    const allowedStages = projectStageAccess[roleId]
-    if (allowedStages) return allowedStages.includes(p.stageId)
-    return p.roles.includes(roleId)
-  })
-})
-const hasLeaderProjects = computed(() => myProjects.value.some((p) => roleIdForProject(p) === 'leader'))
-const hasNonLeaderProjects = computed(() => myProjects.value.some((p) => roleIdForProject(p) !== 'leader'))
 
-/** 阶段状态（按当前项目）—— 根据项目当前 stageId 推导：之前 done，当前 doing，之后 todo */
+const myProjects = computed(() => projects.filter((project) => {
+  const roleId = roleIdForProject(project)
+  if (['leader', 'engineer'].includes(roleId)) return true
+  const allowedStages = projectStageAccess[roleId]
+  if (allowedStages) return allowedStages.includes(project.stageId)
+  return project.roles?.includes(roleId) ?? true
+}))
+const hasLeaderProjects = computed(() => myProjects.value.some((project) => roleIdForProject(project) === 'leader'))
+const hasNonLeaderProjects = computed(() => myProjects.value.some((project) => roleIdForProject(project) !== 'leader'))
+
 const currentProjectStageStatus = computed(() => {
-  const p = currentProject.value
-  if (!p || !p.stageId) return stageStatus
-  const idx = flowStages.findIndex((s) => s.id === p.stageId)
-  if (idx === -1) return stageStatus
-  const map = {}
-  flowStages.forEach((s, i) => {
-    if (i < idx) map[s.id] = 'done'
-    else if (i === idx) map[s.id] = 'doing'
-    else map[s.id] = 'todo'
-  })
-  return map
-})
+  const project = currentProject.value
+  if (!project?.stageId) return stageStatus
+  const index = flowStages.findIndex((stage) => stage.id === project.stageId)
+  if (index === -1) return stageStatus
 
-/** 阶段状态（全局默认，兼容旧引用） */
+  return Object.fromEntries(flowStages.map((stage, stageIndex) => [
+    stage.id,
+    stageIndex < index ? 'done' : (stageIndex === index ? 'doing' : 'todo'),
+  ]))
+})
 const stageStatusOf = computed(() => stageStatus)
 
-function login(userId) {
-  state.userId = userId || state.userId
-  state.view = 'dashboard'
+async function login(credentials) {
+  const payload = typeof credentials === 'string' ? { personaId: credentials } : credentials
+  state.authenticating = true
+  state.authError = ''
+  try {
+    const session = await platformService.login(payload || {})
+    state.userId = session.userId || session.user?.id || payload?.personaId || state.userId
+    replaceArray(projects, await platformService.getProjects({ userId: state.userId }))
+    if (projects[0]) state.currentProjectId = projects[0].id
+    state.view = 'dashboard'
+    return user.value
+  } catch (error) {
+    state.authError = error.message || '登录失败'
+    throw error
+  } finally {
+    state.authenticating = false
+  }
 }
 
-function logout() {
+async function logout() {
   state.view = 'login'
-}
-
-function openProject(id) {
-  state.currentProjectId = id
-  const p = projects.find((x) => x.id === id)
-  if (p) state.currentStageId = p.stageId
-  // 项目负责人默认进驾驶舱；其余角色进入项目当前所在阶段。
-  const role = roleForProject(p)
-  state.cockpitTab = role.id === 'leader' ? 'overview' : (p?.stageId || role.focusStage || 's2')
   state.stageFunc = null
   state.workspaceTarget = null
-  state.view = 'cockpit'
+  try {
+    await platformService.logout()
+  } catch {
+    // Local logout must not be blocked by an unavailable server.
+  }
+}
+
+function applyProjectContext(context = {}) {
+  replaceArray(todos, context.todos)
+  replaceArray(results, context.results)
+  replaceArray(projectTree, context.tree)
+  replaceArray(boreholes, context.boreholes)
+  replaceArray(strataColors, context.strataColors)
+  replaceObject(boreholeLogs, {})
+  replaceObject(cagDatasets, {})
+  replaceObject(cagLoading, {})
+}
+
+async function openProject(id) {
+  const project = projects.find((item) => item.id === id)
+  if (!project) throw new Error('项目不存在或无权访问')
+
+  state.projectLoading = true
+  state.projectError = ''
+  state.currentProjectId = id
+  state.currentStageId = project.stageId
+  const role = roleForProject(project)
+  state.cockpitTab = role.id === 'leader' ? 'overview' : (project.stageId || role.focusStage || flowStages[0]?.id)
+  state.stageFunc = null
+  state.workspaceTarget = null
+
+  try {
+    applyProjectContext(await platformService.getProjectContext(id, { roleId: role.id }))
+    state.view = 'cockpit'
+  } catch (error) {
+    state.projectError = error.message || '项目数据加载失败'
+    throw error
+  } finally {
+    state.projectLoading = false
+  }
+}
+
+async function loadBoreholeLog(code) {
+  if (!code || !state.currentProjectId) return null
+  if (boreholeLogs[code]) return boreholeLogs[code]
+  const log = await platformService.getBoreholeLog(state.currentProjectId, code)
+  boreholeLogs[code] = {
+    code,
+    layers: log.layers || [],
+    waterLevel: Number(log.waterLevel) || 0,
+  }
+  return boreholeLogs[code]
+}
+
+async function loadCagDataset(dataset, refresh = false) {
+  if (!dataset || !state.currentProjectId) return []
+  if (!refresh && cagDatasets[dataset]) return cagDatasets[dataset]
+  cagLoading[dataset] = true
+  try {
+    cagDatasets[dataset] = await platformService.getCagDataset(state.currentProjectId, dataset)
+    return cagDatasets[dataset]
+  } finally {
+    cagLoading[dataset] = false
+  }
+}
+
+async function createCagRow(dataset, row) {
+  const created = await platformService.createCagRow(state.currentProjectId, dataset, row)
+  const rows = cagDatasets[dataset] || (cagDatasets[dataset] = [])
+  rows.push(created)
+  return created
+}
+
+async function updateCagRow(dataset, rowId, changes) {
+  const updated = await platformService.updateCagRow(state.currentProjectId, dataset, rowId, changes)
+  const target = cagDatasets[dataset]?.find((row) => String(row.id) === String(rowId))
+  if (target) Object.assign(target, updated)
+  return updated
+}
+
+async function deleteCagRows(dataset, ids) {
+  await platformService.deleteCagRows(state.currentProjectId, dataset, ids)
+  const idSet = new Set(ids.map(String))
+  cagDatasets[dataset] = (cagDatasets[dataset] || []).filter((row) => !idSet.has(String(row.id)))
+}
+
+function projectTreeForRole(roleId) {
+  return filterProjectTree(projectTree, roleId)
 }
 
 function enterWorkspace(stageId, target) {
@@ -108,7 +256,6 @@ function setStage(stageId) {
   state.workspaceTarget = null
 }
 
-/** 切换顶部 Ribbon 页签（overview | 阶段id） */
 function setCockpitTab(tab) {
   state.cockpitTab = tab
   if (tab !== 'overview') state.currentStageId = tab
@@ -116,7 +263,6 @@ function setCockpitTab(tab) {
   state.workspaceTarget = null
 }
 
-/** 在当前阶段内切换功能区内容 */
 function setStageFunc(func) {
   state.stageFunc = func || null
 }
@@ -124,6 +270,24 @@ function setStageFunc(func) {
 export function useAppStore() {
   return {
     state,
+    personas,
+    personaList,
+    roleDefinitions,
+    projects,
+    flowStages,
+    stageStatus,
+    stageAccess,
+    stageRibbons,
+    categories,
+    integrationUrls,
+    todos,
+    results,
+    projectTree,
+    boreholes,
+    strataColors,
+    boreholeLogs,
+    cagDatasets,
+    cagLoading,
     user,
     currentProject,
     currentProjectRole,
@@ -136,9 +300,16 @@ export function useAppStore() {
     currentProjectStageStatus,
     roleIdForProject,
     roleForProject,
+    projectTreeForRole,
+    initialize,
     login,
     logout,
     openProject,
+    loadBoreholeLog,
+    loadCagDataset,
+    createCagRow,
+    updateCagRow,
+    deleteCagRows,
     enterWorkspace,
     backToCockpit,
     setStage,

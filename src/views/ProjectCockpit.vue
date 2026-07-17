@@ -10,15 +10,10 @@
  */
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { MlRibbon } from '@mlightcad/ribbon'
 import {
   ArrowLeft, DataBoard, Document, Folder, CircleCheck, Promotion, EditPen, MapLocation, View, Notebook, Aim, Files, Coffee, Box, TrendCharts, VideoCamera, Picture, Link, Place, FolderOpened, List, Lock, Monitor, Warning, Timer, Tickets, User, Flag, Share, Grid, ScaleToOriginal,
 } from '@element-plus/icons-vue'
 import { useAppStore } from '../store/useAppStore'
-import {
-  flowStages, stageAccess, stageRibbons, todos, results, personas, IBGI_ENG_INFO,
-} from '../data/mockData'
-import { boreholeTable } from '../data/treeData'
 import FlowNav from '../components/FlowNav.vue'
 import TodoPanel from '../components/TodoPanel.vue'
 import ResultPanel from '../components/ResultPanel.vue'
@@ -29,9 +24,11 @@ import IbgiPane from './IbgiPane.vue'
 const assetUrl = (file) => import.meta.env.BASE_URL + file
 
 const {
+  flowStages, stageAccess, stageRibbons, todos, results, personas,
+  integrationUrls, boreholes: boreholeTable,
   state, user, currentProject, currentProjectRole, currentProjectRoleId,
   currentStage, currentProjectStageStatus,
-  setStage, setCockpitTab, setStageFunc, enterWorkspace, logout,
+  setStage, setStageFunc, enterWorkspace, logout,
 } = useAppStore()
 
 const isLeader = computed(() => currentProjectRoleId.value === 'leader')
@@ -175,10 +172,22 @@ const ribbonTabs = computed(() => {
   return tabs
 })
 
-const activeRibbonTab = computed({
-  get: () => state.cockpitTab,
-  set: (v) => setCockpitTab(v),
-})
+const commandItems = computed(() => ribbonTabs.value.flatMap((tab) => (
+  (tab.groups || []).flatMap((group) => (
+    (group.collections || []).flatMap((collection) => collection.items || [])
+  ))
+)))
+
+const commandId = (item) => item.id.includes('::') ? item.id.split('::')[1] : item.id
+const commandLabel = (item) => ({
+  'cag-system': '专业系统',
+  'full-process': 'i北勘全流程',
+}[commandId(item)] || item.label)
+const isCommandActive = (item) => {
+  const id = commandId(item)
+  if (id === 'dashboard') return isOverview.value && !state.stageFunc
+  return state.stageFunc === id
+}
 
 // —— 当前阶段功能区 ——
 const stageFuncs = computed(() => stageRibbons[state.currentStageId]?.funcs || [])
@@ -217,7 +226,7 @@ const funcPanel = computed(() => {
 
 // —— i北勘 嵌入地址/标题（仅驾驶舱「工程信息」保留）——
 const ibgiUrl = computed(() => {
-  if (isOverview.value && state.stageFunc === 'info') return IBGI_ENG_INFO
+  if (isOverview.value && state.stageFunc === 'info') return integrationUrls.ibgiEngineeringInfo || ''
   return ''
 })
 const ibgiTitle = computed(() => '工程信息')
@@ -225,7 +234,7 @@ const ibgiTitle = computed(() => '工程信息')
 // —— 待办 / 成果：待办在驾驶舱汇总，成果始终跟随当前流程阶段。——
 const todoItems = computed(() => {
   if (!canAccessStage(state.currentStageId)) return []
-  const all = todos[currentProjectRoleId.value] || []
+  const all = todos
   return isOverview.value ? all : all.filter((t) => t.stageId === state.currentStageId)
 })
 const stageTodoItems = computed(() => todoItems.value.filter((t) => t.stageId === state.currentStageId))
@@ -355,18 +364,26 @@ const stageMetrics = computed(() => [
 
     <!-- 主体 -->
     <div class="cp-body">
-      <!-- 顶部阶段 Ribbon：普通角色仅显示当前阶段，项目负责人额外显示驾驶舱 -->
-      <MlRibbon
-        v-model:active-tab="activeRibbonTab"
-        :tabs="ribbonTabs"
-        :show-file-menu="false"
-        :hide-layout-switcher="true"
-        :hide-minimize-button="true"
-        :hide-key-tips-toggle="true"
-        size="small"
-        class="cp-ribbon"
-        @item-click="onRibbonClick"
-      />
+      <!-- 流程条负责阶段导航；此处仅保留当前阶段的紧凑命令。 -->
+      <div class="cp-commandbar" aria-label="当前阶段操作">
+        <div class="cp-commandbar-context">
+          <span class="cp-commandbar-dot" />
+          <span>{{ isLeader ? '项目操作' : `${currentStage.short}操作` }}</span>
+        </div>
+        <button
+          v-for="(item, index) in commandItems"
+          :key="item.id"
+          type="button"
+          class="cp-command"
+          :class="{ 'is-primary': index === 0 && !state.stageFunc, 'is-active': isCommandActive(item) }"
+          :aria-pressed="isCommandActive(item)"
+          :title="item.tooltip || item.label"
+          @click="onRibbonClick({ itemId: item.id })"
+        >
+          <el-icon><component :is="item.icon || Document" /></el-icon>
+          <span>{{ commandLabel(item) }}</span>
+        </button>
+      </div>
 
       <main class="cp-main">
         <!-- 项目驾驶舱：仅展示当前项目信息 -->
@@ -405,7 +422,7 @@ const stageMetrics = computed(() => [
                 <span class="bc-sub">{{ stageTodoItems.length }} 项</span>
                 <el-button v-if="stageTodoItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('todo')">全部</el-button>
               </div>
-              <TodoPanel :items="stageTodoItems.slice(0,4)" empty-text="本阶段暂无待办" @handle="onTodoHandle" />
+              <TodoPanel :items="stageTodoItems.slice(0,4)" :stages="flowStages" empty-text="本阶段暂无待办" @handle="onTodoHandle" />
             </div>
             <div class="block-card">
               <div class="bc-head">
@@ -413,7 +430,7 @@ const stageMetrics = computed(() => [
                 <span class="bc-sub">{{ resultItems.length }} 项</span>
                 <el-button v-if="resultItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('result')">全部</el-button>
               </div>
-              <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
+              <ResultPanel :results="resultItems" :role="currentProjectRoleId" :stages="flowStages" @view="onResultView" />
             </div>
           </div>
         </div>
@@ -454,13 +471,13 @@ const stageMetrics = computed(() => [
               <div class="bc-head"><span class="bc-title">本阶段待办</span><span class="bc-sub">{{ todoItems.length }} 项</span>
                 <el-button v-if="todoItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('todo')">全部</el-button>
               </div>
-              <TodoPanel :items="todoItems.slice(0,4)" empty-text="本阶段暂无待办" @handle="onTodoHandle" />
+              <TodoPanel :items="todoItems.slice(0,4)" :stages="flowStages" empty-text="本阶段暂无待办" @handle="onTodoHandle" />
             </div>
             <div class="block-card">
               <div class="bc-head"><span class="bc-title">本阶段成果</span><span class="bc-sub">{{ resultItems.length }} 项</span>
                 <el-button v-if="resultItems.length" text size="small" style="margin-left:auto" @click="setStageFunc('result')">全部</el-button>
               </div>
-              <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
+              <ResultPanel :results="resultItems" :role="currentProjectRoleId" :stages="flowStages" @view="onResultView" />
             </div>
           </div>
         </div>
@@ -542,7 +559,7 @@ const stageMetrics = computed(() => [
               <span class="bc-sub">{{ currentProjectRole.title }} · {{ todoItems.length }} 项</span>
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
-            <TodoPanel :items="todoItems" @handle="onTodoHandle" />
+            <TodoPanel :items="todoItems" :stages="flowStages" @handle="onTodoHandle" />
           </div>
         </div>
 
@@ -554,7 +571,7 @@ const stageMetrics = computed(() => [
               <span class="bc-sub">模型 / 文档 / 报告 / 图件</span>
               <el-button text size="small" style="margin-left:auto" @click="onBackToBase">返回</el-button>
             </div>
-            <ResultPanel :results="resultItems" :role="currentProjectRoleId" @view="onResultView" />
+            <ResultPanel :results="resultItems" :role="currentProjectRoleId" :stages="flowStages" @view="onResultView" />
           </div>
         </div>
 
@@ -650,114 +667,72 @@ const stageMetrics = computed(() => [
 .cp-role { color: #8d9aab; font-size: 11px; }
 
 .cp-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.cp-ribbon {
-  --ml-rb-border: rgba(255,255,255,0.06);
-  --ml-rb-border-strong: rgba(74,158,255,0.16);
-  --ml-rb-bg: #171c23;
-  --ml-rb-panel-bg: #171c23;
-  --ml-rb-tab-text: #dce5f2;
-  --ml-rb-muted: rgba(220,229,242,0.45);
-  --ml-rb-active: #57a6ff;
-  --ml-rb-header-start: #1b2028;
-  --ml-rb-header-end: #1b2028;
-  --ml-rb-hover-bg: rgba(74,158,255,0.09);
-  --ml-rb-hover-border: rgba(74,158,255,0.2);
-  --ml-rb-active-bg: rgba(74,158,255,0.14);
-  --ml-rb-active-border: rgba(74,158,255,0.28);
-  --ml-rb-surface: #222934;
-  --ml-rb-surface-soft: #222934;
+.cp-commandbar {
+  height: 58px;
   flex-shrink: 0;
-  border-width: 0 0 1px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 22px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
 }
-:deep(.cp-ribbon .ml-ribbon__header) {
-  min-height: 36px;
-  padding: 0 20px;
-}
-:deep(.cp-ribbon .ml-ribbon-tabs) { gap: 12px; }
-:deep(.cp-ribbon .ml-ribbon-tab) {
-  height: 36px;
-  padding: 0 2px;
-  color: rgba(220,229,242,0.62);
+.cp-commandbar-context {
+  height: 30px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 8px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+  color: var(--text-mute);
+  font-size: 12px;
   font-weight: 600;
-  line-height: 34px;
+  white-space: nowrap;
 }
-:deep(.cp-ribbon .ml-ribbon-tab:hover) {
-  color: #eef5ff;
-  background: transparent;
+.cp-commandbar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
-:deep(.cp-ribbon .ml-ribbon-tab.is-active) {
-  color: #57a6ff;
-  border-bottom-color: #57a6ff;
-}
-:deep(.cp-ribbon .ml-ribbon__panel) {
-  padding: 6px 20px 4px;
-  background: #171c23;
-}
-:deep(.cp-ribbon .ml-ribbon-group) {
-  border-right-color: rgba(255,255,255,0.06);
-  padding: 0 10px;
-}
-:deep(.cp-ribbon .ml-ribbon-group:first-child) { padding-left: 0; }
-:deep(.cp-ribbon .ml-ribbon-item-host .el-button) {
-  color: rgba(232,239,248,0.82);
+.cp-command {
+  height: 40px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid transparent;
   border-radius: 6px;
-}
-:deep(.cp-ribbon .ml-ribbon-item-host .el-button .el-icon) { color: #70b5ff; }
-:deep(.cp-ribbon .ml-ribbon-group__footer) { color: rgba(220,229,242,0.38); }
-:deep(.ml-ribbon-group[data-group-id="g-leader"]),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"]),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"]),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"]),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"]) {
-  width: auto;
-  min-width: 330px;
-  max-width: none;
-  padding: 6px 12px;
-  border-right: 0;
-}
-:deep(.ml-ribbon-group[data-group-id="g-leader"] .ml-ribbon-collection),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"] .ml-ribbon-collection),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"] .ml-ribbon-collection),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"] .ml-ribbon-collection),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"] .ml-ribbon-collection) {
-  gap: 10px;
-}
-:deep(.ml-ribbon-group[data-group-id="g-leader"] .ml-ribbon-item-host.is-large .el-button),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"] .ml-ribbon-item-host.is-large .el-button),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"] .ml-ribbon-item-host.is-large .el-button),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"] .ml-ribbon-item-host.is-large .el-button),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"] .ml-ribbon-item-host.is-large .el-button) {
-  min-width: 96px;
-  padding: 8px 14px;
-  border: 1px solid rgba(112,181,255,0.14);
-  background: rgba(255,255,255,0.025);
-}
-:deep(.ml-ribbon-group[data-group-id="g-leader"] .ml-ribbon-item-host.is-large .el-button:hover),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"] .ml-ribbon-item-host.is-large .el-button:hover),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"] .ml-ribbon-item-host.is-large .el-button:hover),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"] .ml-ribbon-item-host.is-large .el-button:hover),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"] .ml-ribbon-item-host.is-large .el-button:hover) {
-  color: #fff;
-  border-color: rgba(112,181,255,0.42);
-  background: rgba(74,158,255,0.12);
-}
-:deep(.ml-ribbon-group[data-group-id="g-leader"] .ml-ribbon-item-host.is-large .ml-ribbon-item-host__icon),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"] .ml-ribbon-item-host.is-large .ml-ribbon-item-host__icon),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"] .ml-ribbon-item-host.is-large .ml-ribbon-item-host__icon),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"] .ml-ribbon-item-host.is-large .ml-ribbon-item-host__icon),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"] .ml-ribbon-item-host.is-large .ml-ribbon-item-host__icon) {
-  color: #70b5ff;
-  font-size: 24px;
-}
-:deep(.ml-ribbon-group[data-group-id="g-leader"] .ml-ribbon-item-host__label),
-:deep(.ml-ribbon-group[data-group-id="g-s2-engineer"] .ml-ribbon-item-host__label),
-:deep(.ml-ribbon-group[data-group-id="g-s7-engineer"] .ml-ribbon-item-host__label),
-:deep(.ml-ribbon-group[data-group-id="g-s8-delivery"] .ml-ribbon-item-host__label),
-:deep(.ml-ribbon-group[data-group-id="g-focused-stage"] .ml-ribbon-item-host__label) {
-  font-size: 13px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
+.cp-command .el-icon { color: var(--text-mute); font-size: 17px; }
+.cp-command:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border);
+}
+.cp-command:hover .el-icon { color: var(--accent); }
+.cp-command.is-primary,
+.cp-command.is-active {
+  color: var(--accent);
+  background: var(--surface-active);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+.cp-command.is-primary .el-icon,
+.cp-command.is-active .el-icon { color: var(--accent); }
 .cp-inline-ws { flex: 1; min-height: 0; }
 
 .cp-main { flex: 1; overflow: hidden; }
@@ -841,19 +816,19 @@ const stageMetrics = computed(() => [
 .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: rgba(255,255,255,0.4); }
 .ph-text { font-size: 14px; }
 
-.external-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px; color: rgba(255,255,255,0.55); }
+.external-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px; color: var(--text-dim); }
 .external-panel .el-icon { color: #fbbf24; }
-.ep-title { color: #e0e4ed; font-size: 18px; font-weight: 600; }
+.ep-title { color: var(--text); font-size: 18px; font-weight: 600; }
 .ep-desc { max-width: 520px; text-align: center; font-size: 13px; line-height: 1.6; }
 
-.material-list { width: 100%; max-width: 480px; margin-top: 24px; padding: 16px; background: #202630; border: 1px solid #303844; border-radius: 8px; }
+.material-list { width: 100%; max-width: 480px; margin-top: 24px; padding: 16px; background: var(--surface-card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 
 @media (max-width: 1100px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
   .two-col { grid-template-columns: 1fr; }
 }
-.ml-title { color: #e0e4ed; font-size: 14px; font-weight: 600; margin-bottom: 12px; text-align: center; }
-.ml-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 6px; color: rgba(255,255,255,0.7); font-size: 13px; }
-.ml-item:hover { background: rgba(255,255,255,0.04); }
-.ml-item .el-icon { color: #6cb6ff; font-size: 16px; }
+.ml-title { color: var(--text); font-size: 14px; font-weight: 600; margin-bottom: 12px; text-align: center; }
+.ml-item { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 6px; color: var(--text); font-size: 13px; font-weight: 500; }
+.ml-item:hover { background: var(--surface-hover); }
+.ml-item .el-icon { color: var(--accent); font-size: 16px; }
 </style>

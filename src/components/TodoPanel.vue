@@ -3,17 +3,16 @@
  * 流程待办面板 —— 按角色显示待办
  * 带 action(CAG/s3mb) 的待办可"去办理"唤起专业工作区
  */
-import { computed } from 'vue'
 import { Aim, EditPen, Document, DataAnalysis, Tickets, Right } from '@element-plus/icons-vue'
-import { flowStages } from '../data/mockData'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
   emptyText: { type: String, default: '暂无待办' },
+  stages: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['handle'])
 
-const stageName = (id) => flowStages.find((s) => s.id === id)?.name || '-'
+const stageName = (id) => props.stages.find((s) => s.id === id)?.name || '-'
 
 const priColor = (p) => ({ '高': '#ef4444', '中': '#f59e0b', '低': '#6b7280' }[p] || '#6b7280')
 const typeIcon = { '制图': EditPen, '建模': DataAnalysis, '审核': Aim, '审定': Aim, '探测': Aim, '复核': Aim, '报告': Document, '数据': Tickets }

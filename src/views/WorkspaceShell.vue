@@ -22,11 +22,11 @@ import CagDataView from './CagDataView.vue'
 import CagCommandPanel from './CagCommandPanel.vue'
 import CagAutoLayerPane from './CagAutoLayerPane.vue'
 import { buildRibbonForRole, fileMenuItems } from '../data/ribbonConfig'
-import { buildTreeForRole } from '../data/treeData'
 import { useAppStore } from '../store/useAppStore'
 
 const {
   state, user, currentProject, currentProjectRole, currentProjectRoleId, backToCockpit,
+  projectTreeForRole,
 } = useAppStore()
 
 // 内联模式：嵌入驾驶舱内容区时隐藏顶部返回条、撑满父级
@@ -100,7 +100,7 @@ const cagRibbonTabs = computed(() => [{
 const specializedMode = computed(() => placementMode.value || cagMode.value || sectionEditMode.value)
 const ribbonTabs = computed(() => placementMode.value ? placementTabs : cagMode.value ? cagRibbonTabs.value : ribbon.value.tabs)
 const readOnly = computed(() => ribbon.value.readOnly)
-const treeData = computed(() => buildTreeForRole(currentProjectRoleId.value))
+const treeData = computed(() => projectTreeForRole(currentProjectRoleId.value))
 
 const activeTab = ref(placementMode.value ? 'placement' : cagMode.value ? 'cag' : ribbon.value.defaultTab)
 const ribbonLayout = ref('classic')
@@ -308,21 +308,22 @@ const onBack = () => backToCockpit()
     </div>
 
     <!-- Ribbon -->
-    <MlRibbon
-      v-model:active-tab="activeTab"
-      v-model:layout="ribbonLayout"
-      v-model:minimized="ribbonMinimized"
-      :tabs="ribbonTabs"
-      :file-menu-items="specializedMode ? [] : fileMenuItems"
-      :show-file-menu="!specializedMode"
-      :hide-layout-switcher="specializedMode"
-      :hide-minimize-button="specializedMode"
-      :hide-key-tips-toggle="specializedMode"
-      :size="specializedMode ? 'default' : 'small'"
-      :class="{ 'placement-ribbon': placementMode, 'cag-ribbon': cagMode }"
-      @item-click="onRibbonClick"
-      @file-menu-select="onFileMenuSelect"
-    />
+    <div class="workspace-ribbon" :class="{ 'placement-ribbon': placementMode, 'cag-ribbon': cagMode }">
+      <MlRibbon
+        v-model:active-tab="activeTab"
+        v-model:layout="ribbonLayout"
+        v-model:minimized="ribbonMinimized"
+        :tabs="ribbonTabs"
+        :file-menu-items="specializedMode ? [] : fileMenuItems"
+        :show-file-menu="!specializedMode"
+        :hide-layout-switcher="specializedMode"
+        :hide-minimize-button="specializedMode"
+        :hide-key-tips-toggle="specializedMode"
+        :size="specializedMode ? 'default' : 'small'"
+        @item-click="onRibbonClick"
+        @file-menu-select="onFileMenuSelect"
+      />
+    </div>
 
     <div v-if="cagMode" class="cag-workspace">
       <div class="cag-view-head">
@@ -432,10 +433,11 @@ const onBack = () => backToCockpit()
 .ws-name { color: var(--text); font-size: 14px; font-weight: 700; }
 .ws-stage { color: var(--text-dim); font-size: 11px; padding: 3px 8px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; }
 .ws-ro { display: flex; align-items: center; gap: 4px; color: var(--warn); font-size: 12px; padding: 4px 10px; background: rgba(245,158,11,0.1); border-radius: 6px; }
+.workspace-ribbon { flex-shrink: 0; }
 :deep(.placement-ribbon .ml-ribbon__header) { min-height: 36px; padding: 0 14px; }
-:deep(.placement-ribbon .ml-ribbon__panel) { padding: 6px 14px 4px; }
+:deep(.placement-ribbon .ml-ribbon__panel) { padding: 0 14px; }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"]) {
-  width: auto; min-width: 360px; max-width: none; padding: 6px 0; border-right: 0;
+  width: auto; min-width: 360px; max-width: none; padding: 0; border-right: 0;
 }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-collection) { gap: 10px; }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host.is-large .el-button) {
@@ -447,7 +449,7 @@ const onBack = () => backToCockpit()
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host__icon) { font-size: 25px; color: var(--accent); }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host__label) { font-size: 13px; font-weight: 600; }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"]) {
-  width: auto; min-width: 850px; max-width: none; padding: 6px 0; border-right: 0;
+  width: auto; min-width: 850px; max-width: none; padding: 0; border-right: 0;
 }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-collection) { gap: 10px; }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host.is-large) { width: 110px; }
