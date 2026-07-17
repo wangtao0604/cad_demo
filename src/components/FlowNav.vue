@@ -60,25 +60,25 @@ const onItemClick = (s) => {
 <style scoped>
 .flow-nav {
   display: flex; align-items: center;
-  padding: 14px 20px;
-  background: linear-gradient(180deg, #1a1d26, #161922);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 20px;
+  background: #171c23;
+  border-bottom: 1px solid #303844;
   overflow-x: auto;
 }
 .fn-item { display: flex; align-items: center; flex-shrink: 0; }
 .fn-node {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px; border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 14px; border-radius: 6px;
+  background: #1d232c;
+  border: 1px solid #303844;
   cursor: pointer; transition: all 0.18s;
   position: relative;
 }
-.fn-node:hover { background: rgba(255,255,255,0.06); }
+.fn-node:hover { background: #252d38; border-color: #465366; }
 .fn-node.active {
-  background: rgba(200,50,47,0.14);
-  border-color: #c8322f;
-  box-shadow: 0 0 0 1px rgba(200,50,47,0.3) inset, 0 4px 14px rgba(200,50,47,0.2);
+  background: #202d40;
+  border-color: #3b82f6;
+  box-shadow: inset 3px 0 0 #3b82f6;
 }
 .fn-icon {
   width: 34px; height: 34px; border-radius: 8px;
@@ -86,25 +86,21 @@ const onItemClick = (s) => {
   font-size: 17px; flex-shrink: 0;
 }
 .fn-text { display: flex; flex-direction: column; }
-.fn-name { color: #e0e4ed; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.fn-name { color: #f1f5f9; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .fn-status { font-size: 10px; }
 .fn-lock { position: absolute; top: -4px; right: -4px; font-size: 11px; }
 
 /* 状态色 */
 .fn-node.done .fn-icon { background: rgba(16,185,129,0.15); color: #34d399; }
 .fn-node.done .fn-status { color: #34d399; }
-.fn-node.doing .fn-icon { background: rgba(74,158,255,0.15); color: #6cb6ff; animation: pulse 1.8s ease-in-out infinite; }
+.fn-node.doing .fn-icon { background: rgba(59,130,246,0.16); color: #60a5fa; }
 .fn-node.doing .fn-status { color: #6cb6ff; }
 .fn-node.todo .fn-icon { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
-.fn-node.todo .fn-status { color: rgba(255,255,255,0.3); }
+.fn-node.todo .fn-status { color: #748195; }
 .fn-node.blocked .fn-icon { background: rgba(245,158,11,0.15); color: #fbbf24; }
 .fn-node.blocked .fn-status { color: #fbbf24; }
 
 .fn-line { width: 26px; height: 2px; background: rgba(255,255,255,0.1); margin: 0 4px; border-radius: 1px; }
 .fn-line.done { background: #10b981; }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(74,158,255,0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(74,158,255,0); }
-}
 </style>

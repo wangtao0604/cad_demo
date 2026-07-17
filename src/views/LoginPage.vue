@@ -8,6 +8,7 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, Key, Right, Connection } from '@element-plus/icons-vue'
 import { personaList, projects, roleDefinitions } from '../data/mockData'
 import { useAppStore } from '../store/useAppStore'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 const { login } = useAppStore()
 
@@ -51,6 +52,7 @@ const onLogin = () => {
 
 <template>
   <div class="login-page">
+    <ThemeToggle class="login-theme-toggle" />
     <!-- 左侧品牌区 -->
     <div class="login-brand">
       <div class="brand-logo">
@@ -149,6 +151,7 @@ const onLogin = () => {
   background: #0f1117;
   overflow: auto;
 }
+.login-theme-toggle { position: fixed; top: 18px; right: 20px; z-index: 5; }
 /* 左侧品牌区 */
 .login-brand {
   flex: 1.2;

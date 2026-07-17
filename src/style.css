@@ -1,24 +1,37 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; }
-body { overflow: hidden; }
+body {
+  overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+}
 
 :root {
   /* 应用深色主题（对齐 cad-demo #1a1a2e 系） */
-  --app-bg: #1a1a2e;
-  --app-bg-2: #16162a;
-  --panel: #1f1f38;
-  --panel-2: #252542;
-  --panel-3: #2c2c4a;
-  --border: #34344f;
-  --border-light: #3d3d5c;
-  --text: #e6e6f0;
-  --text-dim: #9a9ab5;
-  --text-mute: #6c6c88;
-  --accent: #4a9eff;
-  --accent-2: #66d9ef;
-  --warn: #f7d154;
+  --app-bg: #101318;
+  --app-bg-2: #14181f;
+  --panel: #1b2028;
+  --panel-2: #222934;
+  --panel-3: #293240;
+  --border: #303844;
+  --border-light: #3b4655;
+  --text: #f1f5f9;
+  --text-dim: #a8b3c2;
+  --text-mute: #748195;
+  --accent: #3b82f6;
+  --accent-2: #38bdf8;
+  --warn: #f59e0b;
   --danger: #f56c6c;
   --success: #67c23a;
+  --header-bg: #181d24;
+  --nav-bg: #171c23;
+  --surface-card: #1b2028;
+  --surface-item: #202630;
+  --surface-hover: #252e3a;
+  --surface-active: #202d40;
+  --shadow-card: 0 8px 20px rgba(0,0,0,0.12);
 
   /* 地层配色（地质惯例，全项目统一） */
   --strata-fill: #8b6f4e;     /* 素填土 */
@@ -29,18 +42,51 @@ body { overflow: hidden; }
   --strata-ms: #48484a;       /* 中风化泥岩 */
 }
 
-html.dark body {
-  background: var(--app-bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  font-size: 13px;
+html.dark { color-scheme: dark; }
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --app-bg: #edf1f6;
+  --app-bg-2: #f6f8fb;
+  --panel: #ffffff;
+  --panel-2: #f4f7fa;
+  --panel-3: #e9eef5;
+  --border: #d8e0ea;
+  --border-light: #c6d1df;
+  --text: #172033;
+  --text-dim: #536176;
+  --text-mute: #7c899b;
+  --accent: #2563eb;
+  --accent-2: #0284c7;
+  --header-bg: #ffffff;
+  --nav-bg: #f7f9fc;
+  --surface-card: #ffffff;
+  --surface-item: #f7f9fc;
+  --surface-hover: #edf3fb;
+  --surface-active: #e7f0ff;
+  --shadow-card: 0 6px 18px rgba(31,45,61,0.08);
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #edf1f6;
+  --el-bg-color-overlay: #ffffff;
+  --el-fill-color: #f0f3f7;
+  --el-fill-color-light: #f5f7fa;
+  --el-fill-color-lighter: #fafbfd;
+  --el-fill-color-blank: #ffffff;
+  --el-text-color-primary: #172033;
+  --el-text-color-regular: #536176;
+  --el-text-color-secondary: #7c899b;
+  --el-text-color-placeholder: #9aa5b4;
+  --el-border-color: #d8e0ea;
+  --el-border-color-light: #e2e8f0;
+  --el-border-color-lighter: #edf1f5;
+  --el-mask-color: rgba(255,255,255,0.9);
 }
 
 /* 滚动条 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #4a4a6a; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-mute); }
 
 /* 应用框架布局 */
 .app-frame {
@@ -100,11 +146,12 @@ html.dark body {
 
 /* 工程树 */
 .tree-head {
+  min-height: 42px;
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -141,7 +188,7 @@ html.dark body {
   align-items: center;
   gap: 18px;
   padding: 0 12px;
-  background: var(--panel);
+  background: var(--header-bg);
   border-top: 1px solid var(--border);
   color: var(--text-dim);
   font-size: 12px;
@@ -164,7 +211,25 @@ html.dark body {
 /* 业务视图通用 */
 .view-pad { padding: 16px; }
 .view-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
-.view-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+.view-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+
+/* Element Plus surfaces: keep controls legible across dense engineering views. */
+.el-input, .el-select, .el-input-number {
+  --el-input-bg-color: var(--panel-2);
+  --el-input-border-color: var(--border-light);
+  --el-input-text-color: var(--text);
+  --el-input-placeholder-color: var(--text-mute);
+}
+.el-button:not(.el-button--primary):not(.is-text) {
+  --el-button-bg-color: var(--panel-2);
+  --el-button-border-color: var(--border-light);
+  --el-button-text-color: var(--text-dim);
+  --el-button-hover-bg-color: var(--panel-3);
+  --el-button-hover-border-color: var(--accent);
+  --el-button-hover-text-color: var(--text);
+}
+.el-table { --el-table-header-bg-color: var(--panel-2); --el-table-row-hover-bg-color: var(--surface-hover); }
+.el-dialog { --el-dialog-bg-color: var(--panel); border: 1px solid var(--border-light); border-radius: 8px; }
 
 /* 地层图例 */
 .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 12px; }
@@ -183,3 +248,257 @@ html.dark body {
 
 /* view-pad 兜底 */
 .view-pad { width: 100%; height: 100%; }
+
+/* Light skin. CAD canvases and geology drawings intentionally keep their native palette. */
+html[data-theme='light'] .cockpit-page,
+html[data-theme='light'] .dash-page,
+html[data-theme='light'] .cag-workspace { background: var(--app-bg); }
+
+html[data-theme='light'] .cp-header,
+html[data-theme='light'] .dash-header,
+html[data-theme='light'] .ws-topbar,
+html[data-theme='light'] .cag-view-head {
+  background: var(--header-bg);
+  border-color: var(--border);
+  box-shadow: 0 1px 4px rgba(31,45,61,0.05);
+}
+html[data-theme='light'] .cp-proj-name,
+html[data-theme='light'] .cp-name,
+html[data-theme='light'] .dh-title,
+html[data-theme='light'] .dh-name,
+html[data-theme='light'] .ws-name { color: var(--text); }
+html[data-theme='light'] .cp-proj-cat,
+html[data-theme='light'] .cp-role,
+html[data-theme='light'] .dh-sub,
+html[data-theme='light'] .dh-role { color: var(--text-mute); }
+html[data-theme='light'] .cp-avatar,
+html[data-theme='light'] .dh-avatar {
+  color: var(--text-dim);
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+}
+
+html[data-theme='light'] .flow-nav { background: var(--nav-bg); border-color: var(--border); }
+html[data-theme='light'] .fn-node { background: var(--panel); border-color: var(--border); }
+html[data-theme='light'] .fn-node:hover { background: var(--surface-hover); border-color: var(--border-light); }
+html[data-theme='light'] .fn-node.active { background: var(--surface-active); border-color: var(--accent); }
+html[data-theme='light'] .fn-name { color: var(--text); }
+html[data-theme='light'] .fn-node.todo .fn-icon { background: var(--panel-3); color: var(--text-mute); }
+html[data-theme='light'] .fn-node.todo .fn-status { color: var(--text-mute); }
+html[data-theme='light'] .fn-line { background: var(--border-light); }
+
+html[data-theme='light'] .cp-ribbon {
+  --ml-rb-border: var(--border);
+  --ml-rb-border-strong: #b8cff1;
+  --ml-rb-bg: #f7f9fc;
+  --ml-rb-panel-bg: #f7f9fc;
+  --ml-rb-tab-text: #344258;
+  --ml-rb-muted: #7c899b;
+  --ml-rb-active: #2563eb;
+  --ml-rb-header-start: #ffffff;
+  --ml-rb-header-end: #ffffff;
+  --ml-rb-hover-bg: #edf3fb;
+  --ml-rb-hover-border: #b8cff1;
+  --ml-rb-active-bg: #e7f0ff;
+  --ml-rb-active-border: #8fb2e8;
+  --ml-rb-surface: #ffffff;
+  --ml-rb-surface-soft: #f4f7fa;
+}
+html[data-theme='light'] .cp-ribbon .ml-ribbon__panel { background: #f7f9fc; }
+html[data-theme='light'] .cp-ribbon .ml-ribbon-tab { color: var(--text-dim); }
+html[data-theme='light'] .cp-ribbon .ml-ribbon-tab:hover { color: var(--text); }
+html[data-theme='light'] .cp-ribbon .ml-ribbon-tab.is-active { color: var(--accent); }
+html[data-theme='light'] .cp-ribbon .ml-ribbon-item-host .el-button { color: var(--text-dim); }
+html[data-theme='light'] .cp-ribbon .ml-ribbon-group__footer { color: var(--text-mute); }
+
+html[data-theme='light'] .metric-card,
+html[data-theme='light'] .block-card,
+html[data-theme='light'] .stage-current,
+html[data-theme='light'] .ibgi-card,
+html[data-theme='light'] .material-list {
+  background: var(--surface-card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+html[data-theme='light'] .metric-card .mc-value,
+html[data-theme='light'] .block-card .bc-title,
+html[data-theme='light'] .stage-current .sc-stage,
+html[data-theme='light'] .fc-name,
+html[data-theme='light'] .ml-title { color: var(--text); }
+html[data-theme='light'] .mc-label,
+html[data-theme='light'] .bc-sub,
+html[data-theme='light'] .sc-desc,
+html[data-theme='light'] .fc-tag,
+html[data-theme='light'] .fc-go { color: var(--text-mute); }
+html[data-theme='light'] .func-card,
+html[data-theme='light'] .file-item,
+html[data-theme='light'] .quality-item {
+  color: var(--text);
+  background: var(--surface-item);
+  border-color: var(--border);
+}
+html[data-theme='light'] .func-card:hover { background: var(--surface-hover); border-color: #9db8da; }
+html[data-theme='light'] .fc-icon { background: var(--panel-3); }
+html[data-theme='light'] .proj-tip { color: #35445a; background: #edf5ff; border-color: #bad2f2; }
+html[data-theme='light'] .ibgi-view { background: var(--app-bg); }
+html[data-theme='light'] .placeholder,
+html[data-theme='light'] .external-panel { color: var(--text-mute); }
+html[data-theme='light'] .ep-title { color: var(--text); }
+
+html[data-theme='light'] .dash-toolbar { background: #f7f9fc; border-color: var(--border); }
+html[data-theme='light'] .dt-label,
+html[data-theme='light'] .pc-name,
+html[data-theme='light'] .pc-pct { color: var(--text); }
+html[data-theme='light'] .proj-card {
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+html[data-theme='light'] .proj-card:hover { border-color: #8fb2e8; box-shadow: 0 10px 24px rgba(31,45,61,0.12); }
+html[data-theme='light'] .pc-status,
+html[data-theme='light'] .pc-desc,
+html[data-theme='light'] .pc-meta,
+html[data-theme='light'] .pc-deadline { color: var(--text-mute); }
+html[data-theme='light'] .pc-foot { border-color: var(--border); }
+html[data-theme='light'] .empty-state { color: var(--text-mute); }
+html[data-theme='light'] .dash-map { background: var(--app-bg); }
+html[data-theme='light'] .dash-map .map-canvas { background: var(--panel); border-color: var(--border); }
+html[data-theme='light'] .dash-map .map-legend { background: rgba(255,255,255,0.94); border-color: var(--border); }
+html[data-theme='light'] .dash-map .ml-title,
+html[data-theme='light'] .dash-map .ml-item { color: var(--text-dim); }
+html[data-theme='light'] .dash-map .map-svg text { fill: var(--text); }
+
+html[data-theme='light'] .leader-dash { color: var(--text); background: var(--app-bg); }
+html[data-theme='light'] .leader-dash .kpi-card,
+html[data-theme='light'] .leader-dash .panel,
+html[data-theme='light'] .leader-dash .mini-proj {
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+html[data-theme='light'] .leader-dash .kpi-label,
+html[data-theme='light'] .leader-dash .notice-item,
+html[data-theme='light'] .leader-dash .region-item,
+html[data-theme='light'] .leader-dash .stage-bar-label,
+html[data-theme='light'] .leader-dash .warning-item,
+html[data-theme='light'] .leader-dash .mp-name { color: var(--text); }
+html[data-theme='light'] .leader-dash .kpi-sub,
+html[data-theme='light'] .leader-dash .n-date,
+html[data-theme='light'] .leader-dash .region-count,
+html[data-theme='light'] .leader-dash .panel-empty,
+html[data-theme='light'] .leader-dash .trend-labels,
+html[data-theme='light'] .leader-dash .mp-progress { color: var(--text-mute); }
+html[data-theme='light'] .leader-dash .cat-bar-bg,
+html[data-theme='light'] .leader-dash .stage-bar-bg { background: var(--panel-3); }
+html[data-theme='light'] .leader-dash .map-legend { background: rgba(255,255,255,0.94); border-color: var(--border); }
+html[data-theme='light'] .leader-dash .legend-title,
+html[data-theme='light'] .leader-dash .legend-item { color: var(--text-dim); }
+html[data-theme='light'] .leader-dash .map-svg text { fill: var(--text); }
+
+html[data-theme='light'] .todo-item,
+html[data-theme='light'] .rp-card { background: var(--panel); border-color: var(--border); }
+html[data-theme='light'] .todo-item:hover,
+html[data-theme='light'] .rp-card:hover { border-color: #8fb2e8; }
+html[data-theme='light'] .ti-title,
+html[data-theme='light'] .rc-name { color: var(--text); }
+html[data-theme='light'] .ti-type-icon,
+html[data-theme='light'] .ti-type,
+html[data-theme='light'] .rc-stage,
+html[data-theme='light'] .rp-empty,
+html[data-theme='light'] .todo-empty,
+html[data-theme='light'] .rl-item { color: var(--text-mute); }
+html[data-theme='light'] .rc-fmt { color: var(--text-dim); background: var(--panel-3); }
+
+html[data-theme='light'] .login-page { background: var(--app-bg); }
+html[data-theme='light'] .login-card { background: var(--panel); border-color: var(--border); }
+html[data-theme='light'] .lc-title,
+html[data-theme='light'] .rc-title { color: var(--text); }
+html[data-theme='light'] .lc-sub,
+html[data-theme='light'] .rc-name,
+html[data-theme='light'] .lc-foot { color: var(--text-mute); }
+html[data-theme='light'] .role-chip { background: var(--panel-2); border-color: var(--border); }
+html[data-theme='light'] .role-chip:hover { background: var(--surface-hover); border-color: #e5aaa8; }
+html[data-theme='light'] .role-chip.active { background: #fff1f1; }
+html[data-theme='light'] .captcha-box { background: var(--panel-2); border-color: var(--border); color: #a52d2a; }
+
+html[data-theme='light'] .placement-ribbon .ml-ribbon-item-host.is-large .el-button,
+html[data-theme='light'] .cag-ribbon .ml-ribbon-item-host.is-large .el-button {
+  color: var(--text-dim);
+  background: var(--panel);
+  border-color: var(--border-light);
+}
+html[data-theme='light'] .el-select__wrapper,
+html[data-theme='light'] .el-input__wrapper,
+html[data-theme='light'] .el-textarea__inner {
+  color: var(--text);
+  background: var(--panel-2);
+  box-shadow: 0 0 0 1px var(--border-light) inset;
+}
+html[data-theme='light'] .el-radio-button__inner {
+  color: var(--text-dim);
+  background: var(--panel);
+  border-color: var(--border-light);
+  box-shadow: none;
+}
+html[data-theme='light'] .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: -1px 0 0 0 var(--accent);
+}
+html[data-theme='light'] .el-button--primary.is-plain {
+  color: #2563eb;
+  background: #eef5ff;
+  border-color: #9dbcf0;
+}
+html[data-theme='light'] .el-button--primary.is-plain:hover {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+html[data-theme='light'] .el-popper.is-dark {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 6px 18px rgba(31,45,61,0.14);
+}
+html[data-theme='light'] .el-popper.is-dark .el-popper__arrow::before {
+  background: var(--panel);
+  border-color: var(--border-light);
+}
+html[data-theme='dark'] .el-popper.is-dark {
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.34);
+}
+html[data-theme='dark'] .el-popper.is-dark .el-popper__arrow::before {
+  background: var(--panel-2);
+  border-color: var(--border-light);
+}
+html[data-theme] .el-dropdown-menu,
+html[data-theme] .el-select-dropdown,
+html[data-theme] .el-picker-panel,
+html[data-theme] .el-popover,
+html[data-theme] .el-message-box,
+html[data-theme] .el-notification,
+html[data-theme] .el-message {
+  color: var(--text);
+  background: var(--panel);
+  border-color: var(--border);
+  box-shadow: 0 8px 24px rgba(31,45,61,0.14);
+}
+html[data-theme] .el-dialog,
+html[data-theme] .el-drawer {
+  color: var(--text);
+  background: var(--panel);
+  border-color: var(--border);
+}
+html[data-theme] .el-dropdown-menu__item:not(.is-disabled):hover,
+html[data-theme] .el-select-dropdown__item.is-hovering {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+html[data-theme='light'] .app-tree.collapsed:hover { background: var(--surface-hover); }
+html[data-theme='light'] .cag-view-body { background: var(--app-bg-2); }
+html[data-theme='light'] .cag-view-name { color: var(--text-mute); }

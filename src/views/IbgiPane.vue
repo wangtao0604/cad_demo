@@ -112,13 +112,13 @@ const onFrameLoad = () => { loading.value = false }
 </template>
 
 <style scoped>
-.ibgi-pane { position: absolute; inset: 0; display: flex; flex-direction: column; background: #0f1117; }
-.ib-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #161922; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.ibgi-pane { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--app-bg); }
+.ib-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--border); }
 .ib-banner { display: flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 12px; background: rgba(245,158,11,0.12); border-bottom: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
 .ib-banner.sso { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #34d399; }
 .ib-frame-wrap { flex: 1; position: relative; }
 .ibgi-frame { width: 100%; height: 100%; border: none; background: #fff; }
-.ib-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); background: #0f1117; z-index: 2; }
+.ib-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); background: var(--app-bg); z-index: 2; }
 
 .ib-schematic { flex: 1; display: flex; flex-direction: column; background: #f5f6f8; overflow: auto; }
 .sc-topbar { height: 46px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 16px; gap: 16px; }

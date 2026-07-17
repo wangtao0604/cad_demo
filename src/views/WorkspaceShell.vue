@@ -12,6 +12,7 @@ import {
 } from '@element-plus/icons-vue'
 import ProjectTree from '../components/ProjectTree.vue'
 import StatusBar from '../components/StatusBar.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 import BoreholeTable from './BoreholeTable.vue'
 import BoreholeLog from './BoreholeLog.vue'
 import SectionPane from './SectionPane.vue'
@@ -302,6 +303,7 @@ const onBack = () => backToCockpit()
         <span class="ws-name">{{ currentProject.name }}</span>
         <span class="ws-stage">{{ currentProjectRole.title }} · 专业工作区</span>
       </div>
+      <ThemeToggle class="ws-theme-toggle" />
       <div v-if="readOnly" class="ws-ro"><el-icon><Lock /></el-icon> 只读模式</div>
     </div>
 
@@ -422,13 +424,14 @@ const onBack = () => backToCockpit()
 .app-frame.embedded { width: 100%; height: 100%; }
 .local-file-input { display: none; }
 .ws-topbar {
-  height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
-  padding: 0 16px; background: var(--app-bg-2); border-bottom: 1px solid var(--border);
+  height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+  padding: 0 18px; background: var(--header-bg); border-bottom: 1px solid var(--border);
 }
 .ws-proj { display: flex; align-items: center; gap: 10px; }
+.ws-theme-toggle { margin-left: auto; }
 .ws-name { color: var(--text); font-size: 14px; font-weight: 700; }
-.ws-stage { color: var(--text-dim); font-size: 11px; padding: 2px 8px; background: var(--panel); border-radius: 4px; }
-.ws-ro { margin-left: auto; display: flex; align-items: center; gap: 4px; color: var(--warn); font-size: 12px; padding: 4px 10px; background: rgba(245,158,11,0.1); border-radius: 6px; }
+.ws-stage { color: var(--text-dim); font-size: 11px; padding: 3px 8px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; }
+.ws-ro { display: flex; align-items: center; gap: 4px; color: var(--warn); font-size: 12px; padding: 4px 10px; background: rgba(245,158,11,0.1); border-radius: 6px; }
 :deep(.placement-ribbon .ml-ribbon__header) { min-height: 36px; padding: 0 14px; }
 :deep(.placement-ribbon .ml-ribbon__panel) { padding: 6px 14px 4px; }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"]) {
@@ -436,12 +439,12 @@ const onBack = () => backToCockpit()
 }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-collection) { gap: 10px; }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host.is-large .el-button) {
-  min-width: 108px; padding: 8px 16px; border: 1px solid rgba(74,158,255,0.18); background: rgba(255,255,255,0.025);
+  min-width: 108px; padding: 8px 16px; border: 1px solid var(--border-light); background: var(--surface-item);
 }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host.is-large .el-button:hover) {
-  border-color: rgba(74,158,255,0.48); background: rgba(74,158,255,0.12);
+  border-color: var(--accent); background: var(--surface-hover);
 }
-:deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host__icon) { font-size: 25px; color: #6cb6ff; }
+:deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host__icon) { font-size: 25px; color: var(--accent); }
 :deep(.ml-ribbon-group[data-group-id="g-placement-actions"] .ml-ribbon-item-host__label) { font-size: 13px; font-weight: 600; }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"]) {
   width: auto; min-width: 850px; max-width: none; padding: 6px 0; border-right: 0;
@@ -449,16 +452,16 @@ const onBack = () => backToCockpit()
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-collection) { gap: 10px; }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host.is-large) { width: 110px; }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host.is-large .el-button) {
-  width: 110px; min-width: 110px; padding: 8px 12px; border: 1px solid rgba(74,158,255,0.18); background: rgba(255,255,255,0.025);
+  width: 110px; min-width: 110px; padding: 8px 12px; border: 1px solid var(--border-light); background: var(--surface-item);
 }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host.is-large .el-button:hover) {
-  border-color: rgba(74,158,255,0.48); background: rgba(74,158,255,0.12);
+  border-color: var(--accent); background: var(--surface-hover);
 }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-dropdown) { width: 110px; height: 100%; }
-:deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host__icon) { font-size: 25px; color: #6cb6ff; }
+:deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host__icon) { font-size: 25px; color: var(--accent); }
 :deep(.ml-ribbon-group[data-group-id="g-cag-actions"] .ml-ribbon-item-host__label) { font-size: 13px; font-weight: 600; }
-.cag-workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #0f1117; }
-.cag-view-head { height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 600; }
+.cag-workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--app-bg); }
+.cag-view-head { height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--border); color: var(--text); font-size: 14px; font-weight: 700; }
 .cag-view-head .el-icon { color: var(--accent); font-size: 17px; }
 .cag-view-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--app-bg-2); }
 .section-cad-workspace { position: relative; flex: 1; min-height: 0; }

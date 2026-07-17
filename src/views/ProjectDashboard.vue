@@ -7,6 +7,7 @@ import { Search, DataBoard, Grid, MapLocation, SwitchButton, Aim, Document, Tren
 import { useAppStore } from '../store/useAppStore'
 import { flowStages, categories } from '../data/mockData'
 import LeaderDashboard from '../components/LeaderDashboard.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 const {
   user, myProjects, hasLeaderProjects, hasNonLeaderProjects,
@@ -113,6 +114,7 @@ const onLogout = () => {
         </div>
       </div>
       <div class="dh-right">
+        <ThemeToggle />
         <div class="dh-user">
           <span class="dh-avatar">{{ user.avatar }}</span>
           <div class="dh-userinfo">
