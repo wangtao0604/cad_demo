@@ -1,12 +1,11 @@
 <script setup>
 /**
- * 项目驾驶舱 —— 进入项目后的主页面（阶段 Ribbon 架构）
+ * 项目驾驶舱 —— 进入项目后的主页面（流程导航 + 紧凑操作栏）
  * - 顶部流程导航条（8 节点，明显状态，可点击切阶段）
- * - 顶部 Ribbon 页签：项目负责人保留项目驾驶舱，普通角色只显示当前阶段
- *   · 阶段功能区：保留 i北勘 原功能(iframe 嵌入) + 平台新增功能(补孔/建模等 CAD)
- *   · 每个阶段都有「阶段待办」「成果展示」(成果随阶段不同)
+ * - 第二行操作栏：项目负责人显示项目级入口，普通角色显示当前阶段入口
+ * - 阶段功能区保留 i北勘 原功能 + 平台新增功能（补孔/建模等 CAD）
  * - 内容区按 cockpitTab + stageFunc 渲染：驾驶舱大屏 / 阶段工作台 / i北勘嵌入 / CAD 工作区 / 待办 / 成果 / 地图 …
- * - CAD 模式隐藏顶部阶段 Ribbon（由专业工作区自带 CAD Ribbon 接管，避免双 Ribbon）
+ * - CAD 模式进入专业工作区，由专业工作区自带 Ribbon 接管
  */
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -42,150 +41,66 @@ const iconMap = {
 // 注：Position 等同 MapLocation 图标在此处复用
 iconMap.Position = MapLocation
 
-// —— 顶部 Ribbon 页签：项目负责人多一个「项目驾驶舱」(默认)，其余角色为「项目管控」+ 7 阶段 ——
-const projectItems = [
-  { id:'map',     type:'button', label:'数据地图', size:'small', icon: Place,        tooltip:'勘探点空间分布' },
-  { id:'files',   type:'button', label:'过程文件', size:'small', icon: Folder,       tooltip:'勘察过程文档' },
-  { id:'quality', type:'button', label:'质量管控', size:'small', icon: CircleCheck,  tooltip:'检查 / 审核 / 验收' },
+const stageOverviewCommand = {
+  id: 'stage-overview', label: '阶段总览', icon: DataBoard, tooltip: '当前阶段概览',
+}
+const stageCommonCommands = [
+  { id:'todo', label:'阶段待办', icon: List, tooltip:'本阶段待办' },
+  { id:'result', label:'成果中心', icon: FolderOpened, tooltip:'本阶段成果' },
 ]
-const commonItems = [
-  { id:'todo',   type:'button', label:'阶段待办', size:'small', icon: List,         tooltip:'本阶段待办' },
-  { id:'result', type:'button', label:'成果展示', size:'small', icon: FolderOpened, tooltip:'本阶段成果' },
-]
-// 给 item id 加页签前缀，避免跨页签同名 id 冲突
-const withPrefix = (prefix, items) => items.map((it) => ({ ...it, id: prefix + '::' + it.id }))
-
-const ribbonTabs = computed(() => {
-  // 项目负责人只使用一个管理页签，不暴露任何专业生产阶段菜单。
+// 所有阶段共用同一套扁平操作栏，仅命令内容随阶段和角色变化。
+const commandItems = computed(() => {
   if (isLeader.value) {
-    return [{
-      id: 'overview',
-      title: '项目管理',
-      groups: [{
-        id: 'g-leader', title: '', orientation: 'row',
-        collections: [{
-          id: 'c-leader',
-          items: withPrefix('overview', [
-            { id:'dashboard', type:'button', label:'驾驶舱',   size:'large', icon: DataBoard,    tooltip:'项目驾驶舱' },
-            { id:'full-process', type:'button', label:'全流程（i北勘）', size:'large', icon: Link, tooltip:'i北勘全流程' },
-            { id:'todo',      type:'button', label:'流程待办', size:'large', icon: List,         tooltip:'全部待办' },
-            { id:'result',    type:'button', label:'成果中心', size:'large', icon: FolderOpened, tooltip:'项目成果' },
-          ]),
-        }],
-      }],
-    }]
+    return [
+      { id:'dashboard', label:'项目总览', icon: DataBoard, tooltip:'项目驾驶舱' },
+      { id:'full-process', label:'i北勘全流程', icon: Link, tooltip:'查看 i北勘全流程' },
+      { id:'todo', label:'流程待办', icon: List, tooltip:'全部流程待办' },
+      { id:'result', label:'成果中心', icon: FolderOpened, tooltip:'项目成果' },
+    ]
   }
 
-  const tabs = []
-  // 只展示当前阶段，阶段切换由上方流程导航条负责。
-  const s = currentStage.value
-  const funcs = stageRibbons[s.id]?.funcs || []
-  if (isEngineer.value && s.id === 's2') {
-    return [{
-      id: s.id,
-      title: s.short,
-      groups: [{
-        id: 'g-s2-engineer', title: '', orientation: 'row',
-        collections: [{
-          id: 'c-s2-engineer',
-          items: [
-            { id:'s2-layout', type:'button', label:'布孔',          size:'large', icon: MapLocation,  tooltip:'勘探点布置' },
-            { id:'s2-plan',   type:'button', label:'纲要（i北勘）', size:'large', icon: Document,     tooltip:'在 i北勘中编制勘察纲要' },
-            { id:'s2::todo',  type:'button', label:'阶段待办',      size:'large', icon: List,         tooltip:'本阶段待办' },
-            { id:'s2::result',type:'button', label:'成果展示',      size:'large', icon: FolderOpened, tooltip:'本阶段成果' },
-          ],
-        }],
-      }],
-    }]
+  const stageId = currentStage.value.id
+  let stageCommands = []
+  if (isEngineer.value && stageId === 's2') {
+    stageCommands = [
+      { id:'s2-layout', label:'平面布孔', icon: MapLocation, tooltip:'勘探点布置' },
+      { id:'s2-plan', label:'i北勘纲要', icon: Document, tooltip:'在 i北勘中编制勘察纲要' },
+    ]
+  } else if (isEngineer.value && stageId === 's7') {
+    stageCommands = [
+      { id:'s7-ibgi', label:'i北勘内业', icon: Link, tooltip:'i北勘内业整理' },
+      { id:'cag-system', label:'专业系统', icon: Grid, tooltip:'进入 CAG 专业系统' },
+      { id:'s7-model', label:'地质建模', icon: Box, tooltip:'唤起地质建模程序' },
+    ]
+  } else if (stageId === 's8') {
+    stageCommands = [
+      { id:'s8-report', label:'智能报告', icon: Document, tooltip:'进入智能报告编制程序' },
+      { id:'s8-review', label:'智能审核', icon: CircleCheck, tooltip:'对接智能审核外部程序' },
+      { id:'s8-approval', label:'i北勘审批', icon: Link, tooltip:'进入 i北勘审批流程' },
+    ]
+  } else {
+    const focusedStage = {
+      s3: { id:'s3-recon', label:'i北勘辨识', icon: View },
+      s4: { id:'s4-survey', label:'i北勘放线', icon: MapLocation },
+      s5: { id:'s5-explore', label:'i北勘勘探', icon: Aim },
+    }[stageId]
+    stageCommands = focusedStage
+      ? [focusedStage]
+      : (stageRibbons[stageId]?.funcs || []).map((item) => ({
+          id: item.id,
+          label: item.label,
+          icon: iconMap[item.icon] || Document,
+          tooltip: item.desc || item.label,
+        }))
   }
-  if (isEngineer.value && s.id === 's7') {
-    return [{
-      id: s.id,
-      title: s.short,
-      groups: [{
-        id: 'g-s7-engineer', title: '', orientation: 'row',
-        collections: [{
-          id: 'c-s7-engineer',
-          items: [
-            { id:'s7-ibgi',   type:'button', label:'内业（i北勘）', size:'large', icon: Link,         tooltip:'i北勘内业整理' },
-            { id:'s7::todo',  type:'button', label:'阶段待办',      size:'large', icon: List,         tooltip:'本阶段待办' },
-            { id:'cag-system',type:'button', label:'专业系统（整合CAG部分成果）', size:'large', icon: Grid, tooltip:'进入 CAG 专业系统', props:{ labelWrapLines:2, labelWrapWidth:170 } },
-            { id:'s7-model',  type:'button', label:'唤起地质建模',  size:'large', icon: Box,          tooltip:'唤起地质建模程序' },
-            { id:'s7::result',type:'button', label:'成果展示',      size:'large', icon: FolderOpened, tooltip:'本阶段成果' },
-          ],
-        }],
-      }],
-    }]
-  }
-  if (s.id === 's8') {
-    return [{
-      id: s.id,
-      title: s.short,
-      groups: [{
-        id: 'g-s8-delivery', title: '', orientation: 'row',
-        collections: [{
-          id: 'c-s8-delivery',
-          items: [
-            { id:'s8-report',    type:'button', label:'智能报告',       size:'large', icon: Document,     tooltip:'进入智能报告编制程序' },
-            { id:'s8-review',    type:'button', label:'智能审核',       size:'large', icon: CircleCheck,  tooltip:'对接智能审核外部程序' },
-            { id:'s8-approval',  type:'button', label:'审批（i北勘）', size:'large', icon: Link,         tooltip:'进入 i北勘审批流程' },
-            { id:'s8::todo',     type:'button', label:'阶段待办',       size:'large', icon: List,         tooltip:'本阶段待办' },
-            { id:'s8::result',   type:'button', label:'成果展示',       size:'large', icon: FolderOpened, tooltip:'本阶段成果' },
-          ],
-        }],
-      }],
-    }]
-  }
-  const focusedStage = {
-    s3: { id:'s3-recon',  label:'辨识（i北勘）', icon: View },
-    s4: { id:'s4-survey', label:'放线（i北勘）', icon: MapLocation },
-    s5: { id:'s5-explore',label:'勘探（i北勘）', icon: Aim },
-  }[s.id]
-  if (focusedStage) {
-    return [{
-      id: s.id,
-      title: s.short,
-      groups: [{
-        id: 'g-focused-stage', title: '', orientation: 'row',
-        collections: [{
-          id: 'c-focused-stage',
-          items: [
-            { ...focusedStage, type:'button', size:'large', tooltip: focusedStage.label },
-            { id:`${s.id}::todo`,   type:'button', label:'阶段待办', size:'large', icon: List,         tooltip:'本阶段待办' },
-            { id:`${s.id}::result`, type:'button', label:'成果展示', size:'large', icon: FolderOpened, tooltip:'本阶段成果' },
-          ],
-        }],
-      }],
-    }]
-  }
-  tabs.push({
-    id: s.id,
-    title: s.short,
-    groups: [
-      { id:'g-func-'+s.id, title: s.name, collections: [{ id:'c-func-'+s.id, items: funcs.map((f) => ({
-          id: f.id, type:'button', label: f.label, size:'small', icon: iconMap[f.icon] || Document, tooltip: f.desc || f.label,
-        })) }] },
-      { id:'g-proj-'+s.id, title:'项目', collections: [{ id:'c-proj2-'+s.id, items: withPrefix(s.id, projectItems) }] },
-      { id:'g-com-'+s.id,  title:'通用', collections: [{ id:'c-com-'+s.id,  items: withPrefix(s.id, commonItems) }] },
-    ],
-  })
-  return tabs
+
+  return [stageOverviewCommand, ...stageCommands, ...stageCommonCommands]
 })
-
-const commandItems = computed(() => ribbonTabs.value.flatMap((tab) => (
-  (tab.groups || []).flatMap((group) => (
-    (group.collections || []).flatMap((collection) => collection.items || [])
-  ))
-)))
-
-const commandId = (item) => item.id.includes('::') ? item.id.split('::')[1] : item.id
-const commandLabel = (item) => ({
-  'cag-system': '专业系统',
-  'full-process': 'i北勘全流程',
-}[commandId(item)] || item.label)
+const commandId = (item) => item.id
+const commandLabel = (item) => item.label
 const isCommandActive = (item) => {
   const id = commandId(item)
-  if (id === 'dashboard') return isOverview.value && !state.stageFunc
+  if (id === 'dashboard' || id === 'stage-overview') return !state.stageFunc
   return state.stageFunc === id
 }
 
@@ -250,10 +165,10 @@ const launchExternal = (f) => {
   ElMessage.success({ message: `正在唤起外部程序：${f.label}（${f.desc}）`, duration: 3000 })
 }
 
-// —— Ribbon 命令点击（剥离页签前缀）——
+// —— 紧凑操作栏命令 ——
 const onRibbonClick = ({ itemId }) => {
   const id = itemId.includes('::') ? itemId.split('::')[1] : itemId
-  if (id === 'dashboard') return setStageFunc(null)
+  if (id === 'dashboard' || id === 'stage-overview') return setStageFunc(null)
   if (id === 'full-process') return setStageFunc('full-process')
   if (id === 'todo')   return setStageFunc('todo')
   if (id === 'result') return setStageFunc('result')
@@ -368,7 +283,7 @@ const stageMetrics = computed(() => [
       <div class="cp-commandbar" aria-label="当前阶段操作">
         <div class="cp-commandbar-context">
           <span class="cp-commandbar-dot" />
-          <span>{{ isLeader ? '项目操作' : `${currentStage.short}操作` }}</span>
+          <span>{{ isLeader ? '项目操作' : '当前阶段' }}</span>
         </div>
         <button
           v-for="(item, index) in commandItems"
@@ -585,16 +500,16 @@ const stageMetrics = computed(() => [
               <svg viewBox="0 0 600 360" class="bh-svg">
                 <defs>
                   <pattern id="g2" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M40 0L0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" />
+                    <path d="M40 0L0 0 0 40" fill="none" stroke="var(--border)" />
                   </pattern>
                 </defs>
                 <rect width="600" height="360" fill="url(#g2)" />
-                <path d="M120,80 L480,80 L520,180 L460,300 L140,300 L100,200 Z" fill="rgba(74,158,255,0.04)" stroke="rgba(74,158,255,0.2)" />
+                <path d="M120,80 L480,80 L520,180 L460,300 L140,300 L100,200 Z" fill="var(--surface-item)" stroke="var(--border-light)" />
                 <g v-for="(b,i) in boreholeTable" :key="b.code">
                   <circle :cx="120+i*120" :cy="180" r="14" fill="rgba(200,50,47,0.15)" stroke="#c8322f" />
                   <circle :cx="120+i*120" :cy="180" r="5" fill="#c8322f" />
-                  <text :x="120+i*120" :y="160" text-anchor="middle" fill="#e0e4ed" font-size="12" font-weight="600">{{ b.code }}</text>
-                  <text :x="120+i*120" :y="210" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">深{{ b.depth }}m</text>
+                  <text :x="120+i*120" :y="160" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">{{ b.code }}</text>
+                  <text :x="120+i*120" :y="210" text-anchor="middle" fill="var(--text-mute)" font-size="10">深{{ b.depth }}m</text>
                 </g>
               </svg>
             </div>
@@ -650,21 +565,21 @@ const stageMetrics = computed(() => [
 </template>
 
 <style scoped>
-.cockpit-page { position: fixed; inset: 0; display: flex; flex-direction: column; background: #101318; }
+.cockpit-page { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--app-bg); color: var(--text); }
 .cp-header {
   height: 58px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 22px; background: #181d24; border-bottom: 1px solid #303844;
+  padding: 0 22px; background: var(--header-bg); border-bottom: 1px solid var(--border);
 }
 .cp-left { display: flex; align-items: center; gap: 16px; }
 .cp-proj { display: flex; flex-direction: column; }
-.cp-proj-name { color: #f8fafc; font-size: 16px; font-weight: 700; }
-.cp-proj-cat { color: #8d9aab; font-size: 11px; }
+.cp-proj-name { color: var(--text); font-size: 16px; font-weight: 700; }
+.cp-proj-cat { color: var(--text-mute); font-size: 11px; }
 .cp-right { display: flex; align-items: center; gap: 12px; }
 .cp-user { display: flex; align-items: center; gap: 8px; }
-.cp-avatar { width: 32px; height: 32px; border-radius: 50%; background: #293240; border: 1px solid #3b4655; color:#e8edf4; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.cp-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--panel-3); border: 1px solid var(--border); color: var(--text-dim); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; }
 .cp-userinfo { display: flex; flex-direction: column; }
-.cp-name { color: #e0e4ed; font-size: 13px; font-weight: 600; }
-.cp-role { color: #8d9aab; font-size: 11px; }
+.cp-name { color: var(--text); font-size: 13px; font-weight: 600; }
+.cp-role { color: var(--text-mute); font-size: 11px; }
 
 .cp-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .cp-commandbar {
@@ -738,48 +653,48 @@ const stageMetrics = computed(() => [
 .cp-main { flex: 1; overflow: hidden; }
 .view-scroll { height: 100%; overflow: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 14px; }
-.metric-card { display: flex; align-items: center; gap: 14px; padding: 18px; background: #1b2028; border: 1px solid #303844; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+.metric-card { display: flex; align-items: center; gap: 14px; padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .mc-icon { width: 46px; height: 46px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-.mc-value { color: #f8fafc; font-size: 24px; font-weight: 700; line-height: 1.15; }
-.mc-label { color: #a8b3c2; font-size: 12px; margin-top: 3px; }
+.mc-value { color: var(--text); font-size: 24px; font-weight: 700; line-height: 1.15; }
+.mc-label { color: var(--text-dim); font-size: 12px; margin-top: 3px; }
 
-.block-card { background: #1b2028; border: 1px solid #303844; border-radius: 8px; padding: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+.block-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px; box-shadow: var(--shadow-card); }
 .bc-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
-.bc-title { color: #f8fafc; font-size: 15px; font-weight: 700; }
-.bc-sub { color: #8d9aab; font-size: 12px; }
+.bc-title { color: var(--text); font-size: 15px; font-weight: 700; }
+.bc-sub { color: var(--text-mute); font-size: 12px; }
 
-.proj-tip { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #19263a; border: 1px solid #2d507b; border-radius: 7px; color: #c6d2df; font-size: 13px; }
+.proj-tip { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: color-mix(in srgb, var(--accent) 9%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); border-radius: 7px; color: var(--text-dim); font-size: 13px; }
 .proj-tip .el-icon { color: #6cb6ff; font-size: 18px; }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.stage-current { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: #1b2028; border: 1px solid #34445a; border-left: 4px solid #3b82f6; border-radius: 8px; }
-.sc-stage { color: #fff; font-size: 22px; font-weight: 700; }
-.sc-desc { color: #a8b3c2; font-size: 13px; margin-top: 4px; }
+.stage-current { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: var(--panel); border: 1px solid var(--border-light); border-left: 4px solid var(--accent); border-radius: 8px; }
+.sc-stage { color: var(--text); font-size: 22px; font-weight: 700; }
+.sc-desc { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
 .sc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .sc-access { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.sc-label { color: rgba(255,255,255,0.4); font-size: 12px; }
+.sc-label { color: var(--text-mute); font-size: 12px; }
 .sc-role-tag { padding: 3px 10px; border-radius: 5px; background: rgba(74,158,255,0.12); color: #6cb6ff; font-size: 11px; }
 .sc-denied { display: flex; align-items: center; gap: 6px; color: #fbbf24; font-size: 12px; }
 
 .func-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.func-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #202630; border: 1px solid #303844; border-radius: 7px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
-.func-card:hover { background: #252e3a; border-color: #4b6380; }
+.func-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface-item); border: 1px solid var(--border); border-radius: 7px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.func-card:hover { background: var(--surface-hover); border-color: var(--border-light); }
 .func-card.ibgi { border-left: 3px solid #10b981; }
 .func-card.cad { border-left: 3px solid #4a9eff; }
 .func-card.page { border-left: 3px solid #f59e0b; }
 .func-card.external { border-left: 3px solid #f59e0b; }
 .func-card.common { border-left: 3px solid #38bdf8; }
-.fc-icon { width: 38px; height: 38px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; color: #6cb6ff; flex-shrink: 0; }
+.fc-icon { width: 38px; height: 38px; border-radius: 8px; background: var(--panel-3); display: flex; align-items: center; justify-content: center; font-size: 18px; color: #6cb6ff; flex-shrink: 0; }
 .func-card.ibgi .fc-icon { color: #34d399; }
 .func-card.cad .fc-icon { color: #6cb6ff; }
 .func-card.page .fc-icon { color: #fbbf24; }
 .func-card.external .fc-icon { color: #fbbf24; }
 .func-card.common .fc-icon { color: #38bdf8; }
 .fc-body { flex: 1; display: flex; flex-direction: column; }
-.fc-name { color: #e0e4ed; font-size: 13px; font-weight: 600; }
-.fc-tag { color: rgba(255,255,255,0.35); font-size: 10px; margin-top: 2px; }
-.fc-go { color: rgba(255,255,255,0.3); font-size: 14px; }
+.fc-name { color: var(--text); font-size: 13px; font-weight: 600; }
+.fc-tag { color: var(--text-mute); font-size: 10px; margin-top: 2px; }
+.fc-go { color: var(--text-mute); font-size: 14px; }
 
 .map-card .bh-map { height: 360px; }
 .bh-svg { width: 100%; height: 100%; }
@@ -787,33 +702,33 @@ const stageMetrics = computed(() => [
 .file-list, .quality-list { display: flex; flex-direction: column; gap: 8px; }
 .file-item, .quality-item {
   display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-  background: #202630; border: 1px solid #303844; border-radius: 6px;
-  color: #e0e4ed; font-size: 13px;
+  background: var(--surface-item); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 13px;
 }
 .file-item .el-icon, .quality-item .el-icon { color: #6cb6ff; font-size: 16px; }
 .file-tag, .q-status { margin-left: auto; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
 .file-tag { background: rgba(74,158,255,0.12); color: #6cb6ff; }
 .q-status.pass { background: rgba(103,194,58,0.12); color: #34d399; }
 .q-status.warn { background: rgba(245,158,11,0.12); color: #fbbf24; }
-.q-status.wait { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.45); }
+.q-status.wait { background: var(--panel-3); color: var(--text-mute); }
 
-.ibgi-view { padding: 16px; background: #0f1117; }
-.ibgi-card { position: relative; height: 100%; display: flex; flex-direction: column; background: #1b2028; border: 1px solid #303844; border-radius: 8px; padding: 16px; }
+.ibgi-view { padding: 16px; background: var(--app-bg); }
+.ibgi-card { position: relative; height: 100%; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
 .ibgi-card .bc-head { flex-shrink: 0; }
 .ibgi-outline-card { height: 100%; display: flex; flex-direction: column; padding: 14px; }
 .ibgi-outline-card .bc-head { flex-shrink: 0; margin-bottom: 10px; }
-.ibgi-outline-preview { flex: 1; min-height: 0; overflow: auto; background: #eef1f7; border: 1px solid rgba(255,255,255,0.08); }
+.ibgi-outline-preview { flex: 1; min-height: 0; overflow: auto; background: #eef1f7; border: 1px solid var(--border); }
 .ibgi-outline-preview img { display: block; width: 100%; min-width: 1080px; height: auto; }
 .ibgi-process-card { height: 100%; display: flex; flex-direction: column; padding: 14px; }
 .ibgi-process-card .bc-head { flex-shrink: 0; margin-bottom: 10px; }
-.ibgi-process-preview { flex: 1; min-height: 0; overflow: auto; background: #eef1f7; border: 1px solid rgba(255,255,255,0.08); }
+.ibgi-process-preview { flex: 1; min-height: 0; overflow: auto; background: #eef1f7; border: 1px solid var(--border); }
 .ibgi-process-preview img { display: block; width: 100%; min-width: 1080px; height: auto; }
 .external-preview-card { height: 100%; display: flex; flex-direction: column; padding: 14px; }
 .external-preview-card .bc-head { flex-shrink: 0; margin-bottom: 10px; }
-.external-program-preview { flex: 1; min-height: 0; overflow: hidden; background: #e8edf5; border: 1px solid rgba(255,255,255,0.08); }
+.external-program-preview { flex: 1; min-height: 0; overflow: hidden; background: #e8edf5; border: 1px solid var(--border); }
 .external-program-preview img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: top center; }
 
-.placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: rgba(255,255,255,0.4); }
+.placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: var(--text-mute); }
 .ph-text { font-size: 14px; }
 
 .external-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px; color: var(--text-dim); }

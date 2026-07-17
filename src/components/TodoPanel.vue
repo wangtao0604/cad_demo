@@ -51,18 +51,18 @@ const typeIcon = { '制图': EditPen, '建模': DataAnalysis, '审核': Aim, '�
 .todo-panel { display: flex; flex-direction: column; gap: 10px; }
 .todo-item {
   display: flex; align-items: center; gap: 14px;
-  padding: 14px 16px; background: #1a1d26;
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+  padding: 14px 16px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
   transition: all 0.15s;
 }
-.todo-item:hover { border-color: rgba(74,158,255,0.3); }
+.todo-item:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .ti-pri { width: 30px; height: 30px; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ti-body { flex: 1; min-width: 0; }
-.ti-title { color: #e0e4ed; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.ti-type-icon { color: rgba(255,255,255,0.4); font-size: 14px; }
+.ti-title { color: var(--text); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.ti-type-icon { color: var(--text-mute); font-size: 14px; }
 .ti-topic { padding: 2px 8px; border-radius: 4px; background: rgba(168,85,247,0.15); color: #c084fc; font-size: 10px; font-weight: 600; }
 .ti-meta { display: flex; gap: 12px; margin-top: 6px; }
 .ti-stage { color: #6cb6ff; font-size: 11px; }
-.ti-type { color: rgba(255,255,255,0.4); font-size: 11px; }
-.todo-empty { text-align: center; color: rgba(255,255,255,0.3); padding: 60px; }
+.ti-type { color: var(--text-mute); font-size: 11px; }
+.todo-empty { text-align: center; color: var(--text-mute); padding: 60px; }
 </style>

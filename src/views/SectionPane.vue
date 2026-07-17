@@ -43,12 +43,12 @@ const yAt = (elev) => padT + (topElev - elev) / elevRange * plotH
 const svg = computed(() => {
   let s = ''
   // 背景
-  s += `<rect x="0" y="0" width="${W}" height="${H}" fill="#1f1f38"/>`
+  s += `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--panel)"/>`
   // 网格 + 高程刻度
   for (let e = bottomElev; e <= topElev; e += 4) {
     const y = yAt(e)
-    s += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#2c2c4a" stroke-dasharray="2,4"/>`
-    s += `<text x="${padL - 6}" y="${y + 3}" font-size="10" fill="#9a9ab5" text-anchor="end">${e}</text>`
+    s += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--border)" stroke-dasharray="2,4"/>`
+    s += `<text x="${padL - 6}" y="${y + 3}" font-size="10" fill="var(--text-mute)" text-anchor="end">${e}</text>`
   }
 
   // 地面线 + 各地层多边形（相邻钻孔之间）
@@ -66,7 +66,7 @@ const svg = computed(() => {
       const pts = [
         topLine[i], topLine[i + 1], botLine[i + 1], botLine[i],
       ].map((p) => `${p.x},${p.y}`).join(' ')
-      s += `<polygon points="${pts}" fill="${layer.color}" stroke="#1a1a2e" stroke-width="0.5"/>`
+      s += `<polygon points="${pts}" fill="${layer.color}" stroke="var(--border)" stroke-width="0.5"/>`
     }
   }
 
@@ -80,34 +80,34 @@ const svg = computed(() => {
     const x = xAt(h)
     const yTop = yAt(h.elev)
     const yBot = yAt(h.elev - h.depth)
-    s += `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="#e6e6f0" stroke-width="1.2"/>`
+    s += `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="var(--text)" stroke-width="1.2"/>`
     s += `<circle cx="${x}" cy="${yTop}" r="3" fill="#f7d154" stroke="#1a1a2e"/>`
     // 钻孔编号
-    s += `<text x="${x}" y="${yTop - 8}" font-size="11" fill="#66d9ef" text-anchor="middle" font-weight="600">${h.code}</text>`
+    s += `<text x="${x}" y="${yTop - 8}" font-size="11" fill="var(--accent-2)" text-anchor="middle" font-weight="600">${h.code}</text>`
     // 孔口高程
-    s += `<text x="${x}" y="${yTop - 22}" font-size="9" fill="#9a9ab5" text-anchor="middle">${h.elev.toFixed(1)}</text>`
+    s += `<text x="${x}" y="${yTop - 22}" font-size="9" fill="var(--text-mute)" text-anchor="middle">${h.elev.toFixed(1)}</text>`
     // 孔深
-    s += `<text x="${x}" y="${yBot + 12}" font-size="9" fill="#9a9ab5" text-anchor="middle">${h.depth}m</text>`
+    s += `<text x="${x}" y="${yBot + 12}" font-size="9" fill="var(--text-mute)" text-anchor="middle">${h.depth}m</text>`
   })
 
   // 地层图例
   let lx = padL
   const ly = H - 22
   layerDefs.forEach((l) => {
-    s += `<rect x="${lx}" y="${ly}" width="14" height="10" fill="${l.color}" stroke="#1a1a2e"/>`
-    s += `<text x="${lx + 18}" y="${ly + 9}" font-size="10" fill="#9a9ab5">${l.name}</text>`
+    s += `<rect x="${lx}" y="${ly}" width="14" height="10" fill="${l.color}" stroke="var(--border)"/>`
+    s += `<text x="${lx + 18}" y="${ly + 9}" font-size="10" fill="var(--text-mute)">${l.name}</text>`
     lx += l.name.length * 11 + 32
   })
 
   // 标题
-  s += `<text x="${W / 2}" y="18" font-size="14" fill="#e6e6f0" text-anchor="middle" font-weight="600">${props.title}</text>`
+  s += `<text x="${W / 2}" y="18" font-size="14" fill="var(--text)" text-anchor="middle" font-weight="600">${props.title}</text>`
 
   // 方向标
   s += `<g transform="translate(${W - padR - 30}, ${padT + 10})">`
-  s += `<line x1="0" y1="0" x2="24" y2="0" stroke="#d7dbe2" stroke-width="1.2"/>`
-  s += `<polygon points="24,0 18,-3 18,3" fill="#d7dbe2"/>`
-  s += `<text x="12" y="-5" font-size="10" fill="#d7dbe2" text-anchor="middle">A</text>`
-  s += `<text x="-6" y="3" font-size="10" fill="#d7dbe2" text-anchor="middle">A'</text>`
+  s += `<line x1="0" y1="0" x2="24" y2="0" stroke="var(--text-dim)" stroke-width="1.2"/>`
+  s += `<polygon points="24,0 18,-3 18,3" fill="var(--text-dim)"/>`
+  s += `<text x="12" y="-5" font-size="10" fill="var(--text-dim)" text-anchor="middle">A</text>`
+  s += `<text x="-6" y="3" font-size="10" fill="var(--text-dim)" text-anchor="middle">A'</text>`
   s += `</g>`
 
   return s

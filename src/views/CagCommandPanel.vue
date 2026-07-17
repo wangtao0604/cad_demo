@@ -58,11 +58,11 @@ const calculations = [
 </template>
 
 <style scoped>
-.command-panel-wrap { flex: 1; min-height: 0; padding: 18px; background: #eef1f6; overflow: auto; }
+.command-panel-wrap { flex: 1; min-height: 0; padding: 18px; background: var(--app-bg); overflow: auto; }
 .command-panel { display: grid; grid-template-columns: repeat(5, 78px); grid-auto-rows: 78px; gap: 10px 18px; width: max-content; min-height: 100%; align-content: start; }
 .command-panel.is-calculations { grid-template-columns: repeat(3, 78px); }
-.command-item { width: 78px; height: 78px; padding: 2px; border: 1px solid transparent; background: transparent; color: #20242c; font-family: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; }
-.command-item:hover, .command-item:focus-visible { border-color: #8dbde8; background: #dcecff; outline: none; }
+.command-item { width: 78px; height: 78px; padding: 2px; border: 1px solid transparent; background: transparent; color: var(--text); font-family: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; }
+.command-item:hover, .command-item:focus-visible { border-color: var(--border-light); background: var(--surface-hover); outline: none; }
 .command-icon { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(30,66,90,.22); color: #fff; background: linear-gradient(145deg, #56bee4, #176fa8); box-shadow: inset 0 1px rgba(255,255,255,.65); }
 .command-icon .el-icon { font-size: 28px; }
 .tone-amber { background: linear-gradient(145deg, #f1d55b, #b97908); }
@@ -71,5 +71,5 @@ const calculations = [
 .tone-steel { border-radius: 50%; background: radial-gradient(circle at 35% 28%, #fff, #8dc6e4 38%, #24577e 72%); }
 .tone-green { background: linear-gradient(145deg, #51bd7b, #17734a); }
 .tone-pink { background: linear-gradient(145deg, #f4a2af, #b92c5f); }
-.command-label { width: 100%; color: #161a20; font-size: 12px; line-height: 16px; white-space: nowrap; text-align: center; }
+.command-label { width: 100%; color: var(--text); font-size: 12px; line-height: 16px; white-space: nowrap; text-align: center; }
 </style>

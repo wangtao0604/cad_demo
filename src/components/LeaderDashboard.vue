@@ -159,7 +159,7 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
             <svg viewBox="0 0 600 400" class="map-svg">
               <defs>
                 <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(74,158,255,0.08)" stroke-width="1" />
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--border)" stroke-width="1" />
                 </pattern>
                 <radialGradient id="mapGlow" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stop-color="rgba(74,158,255,0.12)" />
@@ -168,13 +168,13 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
               </defs>
               <rect width="600" height="400" fill="url(#grid2)" />
               <circle cx="300" cy="200" r="160" fill="url(#mapGlow)" />
-              <path d="M60,200 Q150,80 300,90 T540,180 Q560,280 460,330 T200,350 Q80,310 60,200 Z" fill="rgba(74,158,255,0.04)" stroke="rgba(74,158,255,0.18)" stroke-width="1.5" />
+              <path d="M60,200 Q150,80 300,90 T540,180 Q560,280 460,330 T200,350 Q80,310 60,200 Z" fill="var(--surface-item)" stroke="var(--border-light)" stroke-width="1.5" />
               <g v-for="p in mapPoints" :key="p.id" class="map-pt" @click="emit('openProject', p.id)">
                 <circle :cx="p.x" :cy="p.y" :r="26" :fill="stageColor(p.stageId) + '22'" :stroke="stageColor(p.stageId)" stroke-width="1.5" />
                 <circle :cx="p.x" :cy="p.y" :r="8" :fill="stageColor(p.stageId)" />
-                <circle :cx="p.x" :cy="p.y" :r="4" fill="#fff" />
-                <text :x="p.x" :y="p.y - 32" text-anchor="middle" fill="#e0e4ed" font-size="11" font-weight="600">{{ p.name.length > 8 ? p.name.slice(0,7)+'…' : p.name }}</text>
-                <text :x="p.x" :y="p.y + 38" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">{{ stageShort(p.stageId) }} · {{ p.progress }}%</text>
+                <circle :cx="p.x" :cy="p.y" :r="4" fill="var(--panel)" />
+                <text :x="p.x" :y="p.y - 32" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600">{{ p.name.length > 8 ? p.name.slice(0,7)+'…' : p.name }}</text>
+                <text :x="p.x" :y="p.y + 38" text-anchor="middle" fill="var(--text-mute)" font-size="10">{{ stageShort(p.stageId) }} · {{ p.progress }}%</text>
               </g>
             </svg>
             <div class="map-legend">
@@ -251,7 +251,8 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
   height: 100%; overflow: auto;
   display: flex; flex-direction: column; gap: 16px;
   padding: 16px 20px 20px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(74,158,255,0.08), transparent 60%), #0b0d12;
+  color: var(--text);
+  background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%), var(--app-bg);
 }
 
 /* KPI */
@@ -259,9 +260,9 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 .kpi-card {
   display: flex; align-items: center; gap: 14px;
   padding: 16px 18px;
-  background: linear-gradient(135deg, rgba(26,29,38,0.9), rgba(19,22,30,0.95));
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   position: relative; overflow: hidden;
 }
 .kpi-card::before {
@@ -270,8 +271,8 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 }
 .kpi-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
 .kpi-value { font-size: 28px; font-weight: 800; line-height: 1; }
-.kpi-label { color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; margin-top: 6px; }
-.kpi-sub { color: rgba(255,255,255,0.35); font-size: 11px; margin-top: 2px; }
+.kpi-label { color: var(--text); font-size: 13px; font-weight: 600; margin-top: 6px; }
+.kpi-sub { color: var(--text-mute); font-size: 11px; margin-top: 2px; }
 
 /* 三栏 */
 .board-grid { flex: 1 0 560px; display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; min-height: 560px; }
@@ -279,10 +280,10 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 .board-center { min-height: 0; }
 
 .panel {
-  background: linear-gradient(135deg, rgba(26,29,38,0.92), rgba(16,19,26,0.95));
-  border: 1px solid rgba(74,158,255,0.12);
-  border-radius: 12px; padding: 14px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.02);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px;
+  box-shadow: var(--shadow-card);
   display: flex; flex-direction: column; gap: 10px;
 }
 .map-panel { flex: 1; min-height: 0; }
@@ -291,24 +292,24 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 
 /* 公告 */
 .notice-list { display: flex; flex-direction: column; gap: 8px; }
-.notice-item { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.75); font-size: 12px; }
-.n-date { color: rgba(255,255,255,0.35); font-size: 11px; min-width: 68px; }
+.notice-item { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; }
+.n-date { color: var(--text-mute); font-size: 11px; min-width: 68px; }
 .n-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
 /* 类别 */
 .cat-list { display: flex; flex-direction: column; gap: 10px; }
 .cat-item { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .cat-name { width: 70px; white-space: nowrap; }
-.cat-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.cat-bar-bg { flex: 1; height: 6px; background: var(--panel-3); border-radius: 3px; overflow: hidden; }
 .cat-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
 .cat-count { min-width: 24px; text-align: right; font-weight: 700; }
 
 /* 区域 */
 .region-list { display: flex; flex-direction: column; gap: 6px; }
-.region-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.75); }
+.region-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); }
 .region-rank { width: 18px; height: 18px; border-radius: 4px; background: rgba(74,158,255,0.12); color: #4a9eff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
 .region-name { flex: 1; }
-.region-count { color: rgba(255,255,255,0.45); }
+.region-count { color: var(--text-mute); }
 
 /* 地图 */
 .map-wrap { flex: 1; position: relative; min-height: 0; }
@@ -317,46 +318,46 @@ const trend = computed(() => [12, 18, 22, 28, 35, 42, 48, 55, 62, 70, 78, 85])
 .map-pt:hover { filter: brightness(1.3); }
 .map-legend {
   position: absolute; right: 10px; top: 10px;
-  background: rgba(16,19,26,0.9); border: 1px solid rgba(255,255,255,0.08);
+  background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; backdrop-filter: blur(8px);
 }
-.legend-title { color: rgba(255,255,255,0.5); font-size: 10px; margin-bottom: 6px; font-weight: 600; }
-.legend-item { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.65); font-size: 11px; margin-bottom: 3px; }
+.legend-title { color: var(--text-dim); font-size: 10px; margin-bottom: 6px; font-weight: 600; }
+.legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 11px; margin-bottom: 3px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
 /* 阶段分布 */
 .stage-list { display: flex; flex-direction: column; gap: 10px; }
 .stage-bar-item { font-size: 12px; }
-.stage-bar-label { display: flex; justify-content: space-between; color: rgba(255,255,255,0.75); margin-bottom: 5px; }
-.stage-bar-bg { height: 7px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.stage-bar-label { display: flex; justify-content: space-between; color: var(--text); margin-bottom: 5px; }
+.stage-bar-bg { height: 7px; background: var(--panel-3); border-radius: 4px; overflow: hidden; }
 .stage-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
 
 /* 预警 */
 .warning-list { display: flex; flex-direction: column; gap: 8px; }
-.warning-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.75); }
+.warning-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); }
 .w-tag { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
 .warning-item.high .w-tag { background: #c8322f; }
 .warning-item.mid .w-tag { background: #f59e0b; }
 .warning-item.low .w-tag { background: #4a9eff; }
-.panel-empty { color: rgba(255,255,255,0.35); font-size: 12px; padding: 4px 0; }
+.panel-empty { color: var(--text-mute); font-size: 12px; padding: 4px 0; }
 
 /* 趋势图 */
 .trend-chart { height: 90px; display: flex; flex-direction: column; }
 .trend-svg { flex: 1; width: 100%; }
-.trend-labels { display: flex; justify-content: space-between; color: rgba(255,255,255,0.35); font-size: 10px; padding-top: 4px; }
+.trend-labels { display: flex; justify-content: space-between; color: var(--text-mute); font-size: 10px; padding-top: 4px; }
 
 /* 底部项目 */
 .bottom-projs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
 .mini-proj {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 14px; background: rgba(26,29,38,0.8);
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+  padding: 8px 14px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
   cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
 .mini-proj:hover { border-color: rgba(74,158,255,0.3); background: rgba(74,158,255,0.08); }
-.mp-name { color: #e0e4ed; font-size: 12px; font-weight: 600; }
+.mp-name { color: var(--text); font-size: 12px; font-weight: 600; }
 .mp-stage { font-size: 11px; }
-.mp-progress { color: rgba(255,255,255,0.4); font-size: 11px; }
+.mp-progress { color: var(--text-mute); font-size: 11px; }
 
 @media (max-width: 1280px) {
   .board-grid { grid-template-columns: 1fr 1.2fr; }

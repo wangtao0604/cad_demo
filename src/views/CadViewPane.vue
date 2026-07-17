@@ -6,8 +6,9 @@
  * - props.trigger 变化时触发补孔拾取
  * - 命令结束（finally 回调）复位状态
  */
-import { ref, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue'
 import { MlCadViewer } from '@mlightcad/cad-viewer'
+import { AcDbSystemVariables, AcDbSysVarManager } from '@mlightcad/data-model'
 import {
   AcEdOpenMode, AcApDocManager, AcApSettingManager, eventBus,
   isOpenFileProgressComplete,
@@ -23,6 +24,7 @@ import {
   generateCadSection,
   startSectionLine,
 } from '../composables/useSectionCommand'
+import { useTheme } from '../composables/useTheme'
 
 const props = defineProps({
   options: { type: Object, required: true }, // { prefix, startNo, depth }
@@ -71,6 +73,8 @@ if (!AcApDocManager.prototype.__cadDemoWorkerPatched) {
 const emit = defineEmits(['borehole-finish', 'section-finish', 'status', 'created', 'file-loaded'])
 
 const locale = ref('zh')
+const { theme, isDark } = useTheme()
+const cadBackground = computed(() => isDark.value ? 0x1a1a2e : 0xf6f8fb)
 const cadBaseUrl = absUrl('cad-data/')
 const drawingUrl = absUrl('cad-data/templates/acadiso.dxf')
 const cadResourcesReady = ref(false)
@@ -80,6 +84,29 @@ const errorMsg = ref('')
 const pendingTrigger = ref(0)
 const pendingHoleLoad = ref(false)
 const openingFileName = ref('')
+
+const syncCadTheme = () => {
+  const docManager = AcApDocManager.instance
+  const view = docManager?.curView
+  if (!view) return
+
+  const database = docManager.curDocument?.database
+  if (database) {
+    const value = cadBackground.value
+    const color = `RGB:${(value >> 16) & 0xff},${(value >> 8) & 0xff},${value & 0xff}`
+    const sysVars = AcDbSysVarManager.instance()
+    sysVars.setVar(AcDbSystemVariables.MODELBKCOLOR, color, database)
+    sysVars.setVar(AcDbSystemVariables.PAPERBKCOLOR, color, database)
+  }
+
+  view.backgroundColor = cadBackground.value
+}
+
+watch(cadBackground, () => {
+  if (!viewerReady.value) return
+  window.requestAnimationFrame(syncCadTheme)
+})
+
 const prepareCadFonts = async () => {
   const fontMapping = { ...(AcApSettingManager.instance.fontMapping || {}) }
   try {
@@ -144,6 +171,7 @@ const runInteractiveCommand = () => {
 }
 
 const onViewerCreate = () => {
+  syncCadTheme()
   if (props.toolMode === 'section') {
     configureSectionViewer((result) => {
       placing.value = false
@@ -196,6 +224,7 @@ const onOpenFileProgress = (progress) => {
   if (isOpenFileProgressComplete(progress)) {
     const fileName = openingFileName.value
     openingFileName.value = ''
+    window.requestAnimationFrame(syncCadTheme)
     emit('status', `已打开 · ${fileName}`)
     emit('file-loaded', fileName)
     return
@@ -231,36 +260,33 @@ onErrorCaptured((err) => {
 </script>
 
 <template>
-  <div class="cad-pane">
+  <div class="cad-pane" :class="{ 'is-light': !isDark }">
     <div v-if="placing" class="cad-overlay-tip">
       {{ toolMode === 'section' ? '剖线模式：依次拾取剖线节点，空回车或 Esc 结束' : '补孔模式：在视口中点击放置钻孔，空回车或 Esc 结束' }}
     </div>
     <MlCadViewer
       v-if="cadResourcesReady"
       :locale="locale"
-      :background="0x1a1a2e"
+      :background="cadBackground"
       :mode="AcEdOpenMode.Write"
-      theme="dark"
+      :theme="theme"
       :base-url="cadBaseUrl"
       :url="drawingUrl"
       :local-file="localFile"
       @create="onViewerCreate"
     />
     <div v-else class="cad-resource-loading">正在检查 CAD 字体资源…</div>
-    <div
-      v-if="errorMsg"
-      style="position:absolute;bottom:10px;left:10px;z-index:30;max-width:60%;
-             padding:10px 14px;background:#2a1a1a;border:1px solid var(--danger);
-             border-radius:6px;color:var(--danger);font-size:12px;"
-    >
+    <div v-if="errorMsg" class="cad-error">
       {{ errorMsg }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.cad-pane { position: absolute; inset: 0; overflow: hidden; }
-.cad-resource-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #8fa3b8; background: #1a1a2e; font-size: 12px; }
+.cad-pane { --cad-canvas-background: #1a1a2e; position: absolute; inset: 0; overflow: hidden; background: var(--cad-canvas-background); }
+.cad-pane.is-light { --cad-canvas-background: #f6f8fb; }
+.cad-resource-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-mute); background: var(--cad-canvas-background); font-size: 12px; }
+.cad-error { position: absolute; bottom: 10px; left: 10px; z-index: 30; max-width: 60%; padding: 10px 14px; color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--panel)); border: 1px solid var(--danger); border-radius: 6px; font-size: 12px; }
 :deep(.ml-cad-viewer-container) {
   position: absolute !important;
   inset: 0 !important;

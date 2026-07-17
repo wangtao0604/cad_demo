@@ -61,22 +61,22 @@ const lockedResults = computed(() =>
 <style scoped>
 .result-panel { display: flex; flex-direction: column; gap: 18px; }
 .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
-.rp-empty { padding: 36px 16px; color: rgba(255,255,255,0.38); font-size: 13px; text-align: center; }
+.rp-empty { padding: 36px 16px; color: var(--text-mute); font-size: 13px; text-align: center; }
 .rp-card {
   display: flex; align-items: center; gap: 14px;
-  padding: 16px; background: #1a1d26;
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+  padding: 16px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
   transition: all 0.15s;
 }
-.rp-card:hover { border-color: rgba(74,158,255,0.3); }
+.rp-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .rc-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .rc-body { flex: 1; min-width: 0; }
-.rc-name { color: #e0e4ed; font-size: 14px; font-weight: 600; }
+.rc-name { color: var(--text); font-size: 14px; font-weight: 600; }
 .rc-meta { display: flex; gap: 10px; margin-top: 6px; align-items: center; }
 .rc-type { font-size: 11px; font-weight: 600; }
-.rc-fmt { padding: 1px 6px; border-radius: 3px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); font-size: 10px; }
-.rc-stage { color: rgba(255,255,255,0.35); font-size: 11px; }
+.rc-fmt { padding: 1px 6px; border-radius: 3px; background: var(--panel-3); color: var(--text-dim); font-size: 10px; }
+.rc-stage { color: var(--text-mute); font-size: 11px; }
 .rp-locked { padding: 14px 16px; background: rgba(245,158,11,0.05); border: 1px dashed rgba(245,158,11,0.25); border-radius: 10px; }
 .rl-title { display: flex; align-items: center; gap: 6px; color: #fbbf24; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
-.rl-item { color: rgba(255,255,255,0.35); font-size: 12px; padding: 3px 0; }
+.rl-item { color: var(--text-mute); font-size: 12px; padding: 3px 0; }
 </style>

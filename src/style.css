@@ -33,6 +33,20 @@ body {
   --surface-active: #202d40;
   --shadow-card: 0 8px 20px rgba(0,0,0,0.12);
 
+  /* mlightcad floating editors, command line and selection overlays */
+  --ml-ui-text: var(--text);
+  --ml-ui-text-muted: var(--text-dim);
+  --ml-ui-bg: var(--panel);
+  --ml-ui-border: var(--border-light);
+  --ml-ui-shadow: var(--shadow-card);
+  --ml-ui-overlay: color-mix(in srgb, var(--app-bg) 45%, transparent);
+  --ml-ui-accent: var(--accent);
+  --ml-ui-accent-alt: var(--accent-2);
+  --ml-ui-danger: var(--danger);
+  --ml-ui-canvas-line: var(--accent);
+  --ml-ui-canvas-fill: color-mix(in srgb, var(--accent) 20%, transparent);
+  --ml-ui-canvas-fill-mix: color-mix(in srgb, var(--accent) 20%, transparent);
+
   /* 地层配色（地质惯例，全项目统一） */
   --strata-fill: #8b6f4e;     /* 素填土 */
   --strata-clay: #c9a96e;     /* 粉质粘土 */
@@ -203,9 +217,16 @@ html.dark { color-scheme: dark; }
 .cad-overlay-tip {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   z-index: 20; padding: 6px 14px; border-radius: 4px;
-  background: rgba(20,28,42,0.92); border: 1px solid var(--accent);
-  color: var(--accent-2); font-size: 12px; pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  background: color-mix(in srgb, var(--panel) 94%, var(--accent));
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  color: var(--accent); font-size: 12px; pointer-events: none;
+  box-shadow: var(--shadow-card);
+}
+
+.ml-cli-recent-line {
+  color: var(--text) !important;
+  background: color-mix(in srgb, var(--panel) 94%, transparent) !important;
+  border: 1px solid var(--border) !important;
 }
 
 /* 业务视图通用 */
@@ -249,7 +270,7 @@ html.dark { color-scheme: dark; }
 /* view-pad 兜底 */
 .view-pad { width: 100%; height: 100%; }
 
-/* Light skin. CAD canvases and geology drawings intentionally keep their native palette. */
+/* Compatibility overrides for legacy components that still declare dark defaults locally. */
 html[data-theme='light'] .cockpit-page,
 html[data-theme='light'] .dash-page,
 html[data-theme='light'] .cag-workspace { background: var(--app-bg); }

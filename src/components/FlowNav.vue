@@ -61,24 +61,24 @@ const onItemClick = (s) => {
 .flow-nav {
   display: flex; align-items: center;
   padding: 12px 20px;
-  background: #171c23;
-  border-bottom: 1px solid #303844;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
   overflow-x: auto;
 }
 .fn-item { display: flex; align-items: center; flex-shrink: 0; }
 .fn-node {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px; border-radius: 6px;
-  background: #1d232c;
-  border: 1px solid #303844;
+  background: var(--panel);
+  border: 1px solid var(--border);
   cursor: pointer; transition: all 0.18s;
   position: relative;
 }
-.fn-node:hover { background: #252d38; border-color: #465366; }
+.fn-node:hover { background: var(--surface-hover); border-color: var(--border-light); }
 .fn-node.active {
-  background: #202d40;
-  border-color: #3b82f6;
-  box-shadow: inset 3px 0 0 #3b82f6;
+  background: var(--surface-active);
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .fn-icon {
   width: 34px; height: 34px; border-radius: 8px;
@@ -86,7 +86,7 @@ const onItemClick = (s) => {
   font-size: 17px; flex-shrink: 0;
 }
 .fn-text { display: flex; flex-direction: column; }
-.fn-name { color: #f1f5f9; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.fn-name { color: var(--text); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .fn-status { font-size: 10px; }
 .fn-lock { position: absolute; top: -4px; right: -4px; font-size: 11px; }
 
@@ -95,12 +95,12 @@ const onItemClick = (s) => {
 .fn-node.done .fn-status { color: #34d399; }
 .fn-node.doing .fn-icon { background: rgba(59,130,246,0.16); color: #60a5fa; }
 .fn-node.doing .fn-status { color: #6cb6ff; }
-.fn-node.todo .fn-icon { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
-.fn-node.todo .fn-status { color: #748195; }
+.fn-node.todo .fn-icon { background: var(--panel-3); color: var(--text-mute); }
+.fn-node.todo .fn-status { color: var(--text-mute); }
 .fn-node.blocked .fn-icon { background: rgba(245,158,11,0.15); color: #fbbf24; }
 .fn-node.blocked .fn-status { color: #fbbf24; }
 
-.fn-line { width: 26px; height: 2px; background: rgba(255,255,255,0.1); margin: 0 4px; border-radius: 1px; }
+.fn-line { width: 26px; height: 2px; background: var(--border-light); margin: 0 4px; border-radius: 1px; }
 .fn-line.done { background: #10b981; }
 
 </style>
